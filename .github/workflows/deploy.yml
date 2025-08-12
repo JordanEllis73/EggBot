@@ -4,8 +4,6 @@ name: Deploy to Raspberry Pi
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 env:
   REGISTRY: ghcr.io
@@ -37,7 +35,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: ./api
-        platforms: linux/arm64,linux/amd64
+        platforms: linux/arm64
         push: true
         tags: |
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:latest
@@ -49,7 +47,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: ./ui
-        platforms: linux/arm64,linux/amd64
+        platforms: linux/arm64
         push: true
         tags: |
           ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_UI }}:latest
@@ -59,37 +57,26 @@ jobs:
 
   deploy:
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # This will run on your Pi
     if: github.ref == 'refs/heads/main'
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       
-    - name: Deploy to Raspberry Pi
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.PI_HOST }}
-        username: ${{ secrets.PI_USER }}
-        key: ${{ secrets.PI_SSH_KEY }}
-        script: |
-          # Navigate to project directory
-          cd /home/${{ secrets.PI_USER }}/your-project-name
-          
-          # Pull latest code
-          git pull origin main
-          
-          # Login to GitHub Container Registry
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          
-          # Pull latest images
-          docker compose pull
-          
-          # Stop and remove old containers
-          docker compose down
-          
-          # Start with new images
-          docker compose up -d
-          
-          # Clean up old images
-          docker image prune -af
+    - name: Login to GitHub Container Registry
+      run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      
+    - name: Deploy containers
+      run: |
+        # Pull latest images
+        docker compose pull
+        
+        # Stop and remove old containers
+        docker compose down
+        
+        # Start with new images
+        docker compose up -d
+        
+        # Clean up old images
+        docker image prune -af
