@@ -1,7 +1,7 @@
 # docker-compose.yml (updated for registry images)
 services:
   api:
-    image: ghcr.io/your-username/your-repo-name/api:latest
+    image: ghcr.io/jordanellis73/eggbot/api:latest
     restart: unless-stopped
     volumes:
       - api_data:/app/data
@@ -23,7 +23,7 @@ services:
           memory: 256M
 
   ui:
-    image: ghcr.io/your-username/your-repo-name/ui:latest
+    image: ghcr.io/jordanellis73/eggbot/ui:latest
     restart: unless-stopped
     ports:
       - "80:80"

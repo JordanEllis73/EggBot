@@ -9,8 +9,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME_API: ${{ github.repository }}/api
-  IMAGE_NAME_UI: ${{ github.repository }}/ui
+  IMAGE_NAME_API: ${{ github.repository_owner }}/eggbot/api
+  IMAGE_NAME_UI: ${{ github.repository_owner }}/eggbot/ui
 
 jobs:
   build-and-push:
