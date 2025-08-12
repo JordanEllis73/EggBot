@@ -1,0 +1,28 @@
+# docker-compose.dev.yml
+services:
+  api:
+    build:
+      context: ./api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./api:/app
+    ports:
+      - "8000:8000"
+    # map serial device only when connected locally
+    devices:
+      - "/dev/ttyACM0:/dev/ttyACM0"
+    group_add:
+      - "dialout"   # 'dialout' on many systems; adjust as needed
+    environment:
+      - SERIAL_PORT=/dev/ttyACM0
+      - BAUD=115200
+  ui:
+    build:
+      context: ./ui
+      target: build
+    command: sh -c "npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ./ui:/ui
+      - /ui/node_modules
+    ports:
+      - "5173:5173"
