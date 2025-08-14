@@ -15,6 +15,17 @@ class SetpointIn(BaseModel):
 class DamperIn(BaseModel):
     damper_percent: int = Field(ge=0, le=100)
 
+class PIDGainsIn(BaseModel):
+    pid_gains: List[float]
+
+class PIDPreset(BaseModel):
+    name: str
+    gains: List[float]
+
+class SavePresetRequest(BaseModel):
+    name: str
+    gains: List[float]
+
 class TelemetryOut(BaseModel):
     points: List[Status]
     

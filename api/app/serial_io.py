@@ -3,7 +3,7 @@ import threading
 import time
 from datetime import datetime
 from typing import Optional, List
-from .config import settings
+from app.config import settings
 
 try:
     import serial  # type: ignore
@@ -50,6 +50,12 @@ class ControllerIO:
         with self._lock:
             self._damper_percent = percent
         self._send({"damper_percent": percent})
+
+    def set_pid_gains(self, kp: float, ki: float, kd: float) -> None:
+        with self._lock:
+            print(f"Updating PID gains to {kp}, {ki}, {kd}")
+            self._pid_gains = [kp, ki, kd]
+        self._send({"pid_gains": [kp, ki, kd]})
 
     def _send(self, msg: dict) -> None:
         if self._simulate:

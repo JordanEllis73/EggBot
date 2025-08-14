@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getStatus, getTelemetry, setDamper, setSetpoint } from "./api";
+import { getStatus, getTelemetry, setDamper, setSetpoint, setPIDGains, getPIDPresets, loadPIDPreset, savePIDPreset } from "./api";
 
 function MiniSparkline({ points, width = 600, height = 120 }) {
   if (!points?.length) return <svg width={width} height={height} />;
@@ -25,18 +25,30 @@ export default function App() {
   // Separate current values from input values
   const [currentSetpoint, setCurrentSetpoint] = useState(110);
   const [currentDamper, setCurrentDamper] = useState(0);
+  const [currentPIDGains, setCurrentPIDGains] = useState([1.0, 0.1, 0.05]); // Default P, I, D values
   
   // Input states
   const [setpointInput, setSetpointInput] = useState('110');
   const [damperInput, setDamperInput] = useState('0');
+  const [pidGainsInput, setPidGainsInput] = useState(['1.0', '0.1', '0.05']);
   
   // Editing states to prevent overwriting user input
   const [isEditingSetpoint, setIsEditingSetpoint] = useState(false);
   const [isEditingDamper, setIsEditingDamper] = useState(false);
+  const [isEditingPID, setIsEditingPID] = useState(false);
   
   // Submitting states for better UX
   const [isSubmittingSetpoint, setIsSubmittingSetpoint] = useState(false);
   const [isSubmittingDamper, setIsSubmittingDamper] = useState(false);
+  const [isSubmittingPID, setIsSubmittingPID] = useState(false);
+
+  // PID Preset states
+  const [pidPresets, setPidPresets] = useState([]);
+  const [selectedPreset, setSelectedPreset] = useState('');
+  const [isLoadingPreset, setIsLoadingPreset] = useState(false);
+  const [isSavingPreset, setIsSavingPreset] = useState(false);
+  const [savePresetName, setSavePresetName] = useState('');
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
 
   const last = useMemo(() => status, [status]);
 
@@ -58,9 +70,19 @@ export default function App() {
         console.error('Failed to get telemetry:', error);
       }
     };
+
+    const loadPresets = async () => {
+      try {
+        const presets = await getPIDPresets();
+        setPidPresets(presets);
+      } catch (error) {
+        console.error('Failed to load PID presets:', error);
+      }
+    };
     
     pollStatus();
     pollTelemetry();
+    loadPresets();
     
     t1 = setInterval(pollStatus, 1000);
     t2 = setInterval(pollTelemetry, 2000);
@@ -92,7 +114,17 @@ export default function App() {
         setDamperInput(newDamper.toString());
       }
     }
-  }, [last, isEditingSetpoint, isEditingDamper]);
+
+    // Update PID gains if they come from status (optional - depends on your API)
+    if (last?.pid_gains && Array.isArray(last.pid_gains)) {
+      setCurrentPIDGains(last.pid_gains);
+      
+      // Only update input if user isn't editing
+      if (!isEditingPID) {
+        setPidGainsInput(last.pid_gains.map(g => g.toString()));
+      }
+    }
+  }, [last, isEditingSetpoint, isEditingDamper, isEditingPID]);
 
   const onSetpointSubmit = async (e) => {
     e.preventDefault();
@@ -138,6 +170,77 @@ export default function App() {
     }
   };
 
+  const onPIDSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmittingPID(true);
+    
+    try {
+      const values = pidGainsInput.map(Number);
+      if (values.some(isNaN) || values.length !== 3) {
+        alert('Please enter valid numbers for all three PID gains (P, I, D)');
+        return;
+      }
+      
+      await setPIDGains(values);
+      setCurrentPIDGains(values);
+      setIsEditingPID(false);
+    } catch (error) {
+      console.error('Failed to set PID gains:', error);
+      alert('Failed to set PID gains. Please try again.');
+    } finally {
+      setIsSubmittingPID(false);
+    }
+  };
+
+  const handleLoadPreset = async () => {
+    if (!selectedPreset) return;
+    
+    setIsLoadingPreset(true);
+    try {
+      const gains = await loadPIDPreset(selectedPreset);
+      setCurrentPIDGains(gains);
+      setPidGainsInput(gains.map(g => g.toString()));
+      
+      // Apply the loaded gains immediately
+      await setPIDGains(gains);
+      
+      // Clear selection after loading
+      setSelectedPreset('');
+    } catch (error) {
+      console.error('Failed to load PID preset:', error);
+      alert('Failed to load PID preset. Please try again.');
+    } finally {
+      setIsLoadingPreset(false);
+    }
+  };
+
+  const handleSavePreset = async () => {
+    if (!savePresetName.trim()) {
+      alert('Please enter a name for the preset');
+      return;
+    }
+    
+    setIsSavingPreset(true);
+    try {
+      await savePIDPreset(savePresetName.trim(), currentPIDGains);
+      
+      // Refresh the presets list
+      const presets = await getPIDPresets();
+      setPidPresets(presets);
+      
+      // Close dialog and clear input
+      setShowSaveDialog(false);
+      setSavePresetName('');
+      
+      alert(`Preset "${savePresetName}" saved successfully!`);
+    } catch (error) {
+      console.error('Failed to save PID preset:', error);
+      alert('Failed to save PID preset. Please try again.');
+    } finally {
+      setIsSavingPreset(false);
+    }
+  };
+
   const handleSetpointChange = (e) => {
     setIsEditingSetpoint(true);
     setSetpointInput(e.target.value);
@@ -148,6 +251,13 @@ export default function App() {
     setDamperInput(e.target.value);
   };
 
+  const handlePIDChange = (index, value) => {
+    setIsEditingPID(true);
+    const newGains = [...pidGainsInput];
+    newGains[index] = value;
+    setPidGainsInput(newGains);
+  };
+
   const handleSetpointCancel = () => {
     setSetpointInput(currentSetpoint.toString());
     setIsEditingSetpoint(false);
@@ -156,6 +266,11 @@ export default function App() {
   const handleDamperCancel = () => {
     setDamperInput(currentDamper.toString());
     setIsEditingDamper(false);
+  };
+
+  const handlePIDCancel = () => {
+    setPidGainsInput(currentPIDGains.map(g => g.toString()));
+    setIsEditingPID(false);
   };
 
   return (
@@ -180,6 +295,7 @@ export default function App() {
           <p>Meat: {last?.meat_temp_c?.toFixed?.(1) ?? "—"} °C</p>
           <p>Setpoint: {last?.setpoint_c?.toFixed(1) ?? "—"} °C</p>
           <p>Damper: {last?.damper_percent ?? 0}%</p>
+          <p>PID: [{currentPIDGains.map(g => g.toFixed(3)).join(', ')}]</p>
         </div>
         
         {/* Controls */}
@@ -291,6 +407,226 @@ export default function App() {
               </div>
             )}
           </form>
+        </div>
+        
+        {/* PID Gains Control */}
+        <div style={{ background: "#141414", padding: 12, borderRadius: 8 }}>
+          <h3>PID Gains</h3>
+          <form onSubmit={onPIDSubmit}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <label style={{ minWidth: 20 }}>P:</label>
+                <input 
+                  type="number" 
+                  step="0.001"
+                  value={pidGainsInput[0]}
+                  onChange={(e) => handlePIDChange(0, e.target.value)}
+                  onFocus={() => setIsEditingPID(true)}
+                  disabled={isSubmittingPID}
+                  style={{ 
+                    padding: 4, 
+                    borderRadius: 4, 
+                    border: isEditingPID ? '2px solid #5bd' : '1px solid #333',
+                    background: '#222',
+                    color: '#eaeaea',
+                    flex: 1
+                  }}
+                />
+              </div>
+              
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <label style={{ minWidth: 20 }}>I:</label>
+                <input 
+                  type="number" 
+                  step="0.001"
+                  value={pidGainsInput[1]}
+                  onChange={(e) => handlePIDChange(1, e.target.value)}
+                  onFocus={() => setIsEditingPID(true)}
+                  disabled={isSubmittingPID}
+                  style={{ 
+                    padding: 4, 
+                    borderRadius: 4, 
+                    border: isEditingPID ? '2px solid #5bd' : '1px solid #333',
+                    background: '#222',
+                    color: '#eaeaea',
+                    flex: 1
+                  }}
+                />
+              </div>
+              
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <label style={{ minWidth: 20 }}>D:</label>
+                <input 
+                  type="number" 
+                  step="0.001"
+                  value={pidGainsInput[2]}
+                  onChange={(e) => handlePIDChange(2, e.target.value)}
+                  onFocus={() => setIsEditingPID(true)}
+                  disabled={isSubmittingPID}
+                  style={{ 
+                    padding: 4, 
+                    borderRadius: 4, 
+                    border: isEditingPID ? '2px solid #5bd' : '1px solid #333',
+                    background: '#222',
+                    color: '#eaeaea',
+                    flex: 1
+                  }}
+                />
+              </div>
+            </div>
+            
+            {isEditingPID && (
+              <div style={{ display: "flex", gap: 8 }}>
+                <button 
+                  type="submit" 
+                  disabled={isSubmittingPID}
+                  style={{ 
+                    padding: '4px 12px', 
+                    borderRadius: 4, 
+                    border: 'none',
+                    background: '#5bd',
+                    color: '#000'
+                  }}
+                >
+                  {isSubmittingPID ? 'Setting...' : 'Apply'}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={handlePIDCancel}
+                  style={{ 
+                    padding: '4px 12px', 
+                    borderRadius: 4, 
+                    border: '1px solid #666',
+                    background: 'transparent',
+                    color: '#eaeaea'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </form>
+
+          {/* PID Presets Section */}
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #333' }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '14px' }}>Presets</h4>
+            
+            {/* Load Preset */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <select 
+                value={selectedPreset}
+                onChange={(e) => setSelectedPreset(e.target.value)}
+                disabled={isLoadingPreset}
+                style={{ 
+                  padding: 4, 
+                  borderRadius: 4, 
+                  border: '1px solid #333',
+                  background: '#222',
+                  color: '#eaeaea',
+                  flex: 1
+                }}
+              >
+                <option value="">Select preset...</option>
+                {pidPresets.map(preset => (
+                  <option key={preset.name} value={preset.name}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+              
+              <button 
+                onClick={handleLoadPreset}
+                disabled={!selectedPreset || isLoadingPreset}
+                style={{ 
+                  padding: '4px 12px', 
+                  borderRadius: 4, 
+                  border: 'none',
+                  background: selectedPreset ? '#5bd' : '#555',
+                  color: selectedPreset ? '#000' : '#aaa',
+                  cursor: selectedPreset ? 'pointer' : 'not-allowed'
+                }}
+              >
+                {isLoadingPreset ? 'Loading...' : 'Load'}
+              </button>
+            </div>
+
+            {/* Save Current Gains */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button 
+                onClick={() => setShowSaveDialog(true)}
+                style={{ 
+                  padding: '4px 12px', 
+                  borderRadius: 4, 
+                  border: '1px solid #666',
+                  background: 'transparent',
+                  color: '#eaeaea',
+                  flex: 1
+                }}
+              >
+                Save Current
+              </button>
+            </div>
+
+            {/* Save Dialog */}
+            {showSaveDialog && (
+              <div style={{ 
+                marginTop: 12, 
+                padding: 12, 
+                background: '#222', 
+                borderRadius: 6,
+                border: '1px solid #444'
+              }}>
+                <div style={{ marginBottom: 8 }}>
+                  <input 
+                    type="text" 
+                    placeholder="Preset name..."
+                    value={savePresetName}
+                    onChange={(e) => setSavePresetName(e.target.value)}
+                    disabled={isSavingPreset}
+                    style={{ 
+                      width: '100%',
+                      padding: 4, 
+                      borderRadius: 4, 
+                      border: '1px solid #333',
+                      background: '#111',
+                      color: '#eaeaea'
+                    }}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button 
+                    onClick={handleSavePreset}
+                    disabled={isSavingPreset || !savePresetName.trim()}
+                    style={{ 
+                      padding: '4px 12px', 
+                      borderRadius: 4, 
+                      border: 'none',
+                      background: savePresetName.trim() ? '#5bd' : '#555',
+                      color: savePresetName.trim() ? '#000' : '#aaa',
+                      flex: 1
+                    }}
+                  >
+                    {isSavingPreset ? 'Saving...' : 'Save'}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowSaveDialog(false);
+                      setSavePresetName('');
+                    }}
+                    style={{ 
+                      padding: '4px 12px', 
+                      borderRadius: 4, 
+                      border: '1px solid #666',
+                      background: 'transparent',
+                      color: '#eaeaea'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         
         {/* Chart */}
