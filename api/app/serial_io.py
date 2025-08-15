@@ -69,12 +69,15 @@ class ControllerIO:
         if self._simulate:
             return None
         if self._ser and self._ser.readable():  # type: ignore
-            line = self._ser.readline().decode("utf-8").strip()  # type: ignore
-            if not line:
-                return None
             try:
-                print(line)
-                return json.loads(line)
+                line = self._ser.readline().decode("utf-8").strip()  # type: ignore
+                if not line:
+                    return None
+                try:
+                    print(line)
+                    return json.loads(line)
+                except Exception:
+                    return None
             except Exception:
                 return None
         return None

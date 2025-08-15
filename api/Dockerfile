@@ -1,57 +1,31 @@
-# # api/Dockerfile
-# FROM python:3.11-slim AS base
-#
-# ENV PYTHONDONTWRITEBYTECODE=1 \
-#     PYTHONUNBUFFERED=1
-#
-# RUN pip install --no-cache-dir poetry
-#
-# WORKDIR /app
-#
-# COPY pyproject.toml ./
-#
-# RUN poetry config virtualenvs.create false \
-#     && poetry install --no-root --no-interaction --no-ansi --only main
-#
-# FROM base AS development
-#
-# COPY app ./app
-#
-# EXPOSE 8000
-#
-# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-#
-# FROM base AS production
-#
-# COPY app ./app
-#
-# EXPOSE 8000
-#
-# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 # api/Dockerfile
-FROM python:3.11-slim AS development
-# Development stage
-RUN pip install --no-cache-dir poetry
+FROM python:3.12.11-slim-bookworm AS base
+
+# Install system dependencies first (better caching)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip first to avoid version parsing issues
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install Poetry using pip with specific version
+RUN pip install --no-cache-dir poetry==1.8.3
+
+# Configure Poetry
+RUN poetry config virtualenvs.create false
 
 WORKDIR /app
 
-COPY pyproject.toml ./
+# Development stage
+FROM base AS development
 
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-root --no-interaction --no-ansi --only main
+# Copy Poetry files (both are important!)
+COPY pyproject.toml poetry.lock* ./
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements first for better caching
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Install development dependencies if you have them
-# COPY requirements-dev.txt .
-# RUN pip install --no-cache-dir -r requirements-dev.txt
+# Install dependencies including dev dependencies
+RUN poetry install --no-root --no-interaction --no-ansi --verbose
 
 # Copy source code
 COPY . .
@@ -59,29 +33,17 @@ COPY . .
 # Expose port
 EXPOSE 8000
 
-# Default development command with reload
+# Development command with reload
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # Production stage
-FROM python:3.11-slim AS production
+FROM base AS production
 
-RUN pip install --no-cache-dir poetry
+# Copy Poetry files
+COPY pyproject.toml poetry.lock* ./
 
-WORKDIR /app
-
-COPY pyproject.toml ./
-
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-root --no-interaction --no-ansi --only main
-    
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements first for better caching
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install only production dependencies
+RUN poetry install --no-root --no-interaction --no-ansi --only main --verbose
 
 # Copy source code
 COPY . .
@@ -89,5 +51,5 @@ COPY . .
 # Expose port
 EXPOSE 8000
 
-# Production command (no reload)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Production command (no reload, more workers)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

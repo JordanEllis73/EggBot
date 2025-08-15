@@ -21,7 +21,7 @@ async def set_setpoint(data: SetpointIn, controller: ControllerIO = Depends(get_
 
 @router.post("/damper")
 async def set_damper(data: DamperIn, controller: ControllerIO = Depends(get_controller)):
-    await controller.set_damper(data.damper_percent)
+    controller.set_damper(data.damper_percent)
     return {"ok": True, "damper_percent": data.damper_percent}
 
 @router.post("/pid_gains")
