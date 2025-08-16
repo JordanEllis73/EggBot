@@ -1,44 +1,69 @@
 import { useEffect, useMemo, useState } from "react";
-import { getStatus, getTelemetry, setDamper, setSetpoint, setPIDGains, getPIDPresets, loadPIDPreset, savePIDPreset } from "./api";
+import { 
+  getStatus, 
+  getTelemetry, 
+  setDamper, 
+  setSetpoint, 
+  setPIDGains, 
+  getPIDPresets, 
+  loadPIDPreset, 
+  savePIDPreset 
+} from "./api";
+import TemperatureChart from "./TemperatureChart";
+import StatusDisplay from "./StatusDisplay";
+import CookSettings from "./CookSettings";
+import TemperatureControls from "./TemperatureControls";
+import ManualControls from "./ManualControls";
+import PIDControls from "./PIDControls";
 
-function MiniSparkline({ points, width = 600, height = 120 }) {
-  if (!points?.length) return <svg width={width} height={height} />;
-  
-  const temps = points.map(p => p.pit_temp_c);
-  const min = Math.min(...temps) - 2;
-  const max = Math.max(...temps) + 2;
-  const xs = points.map((_, i) => (i / (points.length - 1)) * (width - 10) + 5);
-  const ys = temps.map(t => height - ((t - min) / (max - min || 1)) * (height - 10) - 5);
-  const d = xs.map((x, i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(" ");
-  
-  return (
-    <svg width={width} height={height} style={{ background: "#111", borderRadius: 6 }}>
-      <path d={d} stroke="#5bd" fill="none" strokeWidth="2"/>
-    </svg>
-  );
-}
+// You'll need to add this to your api.jsx file
+const setMeatSetpoint = async (meat_setpoint_c) => {
+  try {
+    console.log('Setting meat setpoint: ', meat_setpoint_c);
+    
+    const res = await fetch(`/api/meat_setpoint`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meat_setpoint_c })
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    const result = await res.json();
+    console.log('Meat setpoint success:', result);
+    return result;
+  } catch (error) {
+    console.error("Meat setpoint error:", error);
+    throw error;
+  }
+};
 
 export default function App() {
   const [status, setStatus] = useState(null);
   const [telemetry, setTelemetry] = useState([]);
   
-  // Separate current values from input values
+  // Current values
   const [currentSetpoint, setCurrentSetpoint] = useState(110);
   const [currentDamper, setCurrentDamper] = useState(0);
-  const [currentPIDGains, setCurrentPIDGains] = useState([1.0, 0.1, 0.05]); // Default P, I, D values
+  const [currentPIDGains, setCurrentPIDGains] = useState([1.0, 0.1, 0.05]);
   
   // Input states
   const [setpointInput, setSetpointInput] = useState('110');
+  const [meatSetpointInput, setMeatSetpointInput] = useState('');
   const [damperInput, setDamperInput] = useState('0');
   const [pidGainsInput, setPidGainsInput] = useState(['1.0', '0.1', '0.05']);
+  const [meatType, setMeatType] = useState('');
+  const [meatWeight, setMeatWeight] = useState('');
   
-  // Editing states to prevent overwriting user input
+  // Editing states
   const [isEditingSetpoint, setIsEditingSetpoint] = useState(false);
+  const [isEditingMeatSetpoint, setIsEditingMeatSetpoint] = useState(false);
   const [isEditingDamper, setIsEditingDamper] = useState(false);
   const [isEditingPID, setIsEditingPID] = useState(false);
   
-  // Submitting states for better UX
+  // Submitting states
   const [isSubmittingSetpoint, setIsSubmittingSetpoint] = useState(false);
+  const [isSubmittingMeatSetpoint, setIsSubmittingMeatSetpoint] = useState(false);
   const [isSubmittingDamper, setIsSubmittingDamper] = useState(false);
   const [isSubmittingPID, setIsSubmittingPID] = useState(false);
 
@@ -93,38 +118,21 @@ export default function App() {
     };
   }, []);
 
-  // Update current values and input values only when not editing
+  // Update input values when not editing
   useEffect(() => {
-    if (last?.setpoint_c) {
-      const newSetpoint = Math.round(last.setpoint_c);
-      setCurrentSetpoint(newSetpoint);
-      
-      // Only update input if user isn't editing
-      if (!isEditingSetpoint) {
-        setSetpointInput(newSetpoint.toString());
-      }
+    if (last?.setpoint_c && !isEditingSetpoint) {
+      setSetpointInput(Math.round(last.setpoint_c).toString());
     }
-    
-    if (typeof last?.damper_percent === "number") {
-      const newDamper = last.damper_percent;
-      setCurrentDamper(newDamper);
-      
-      // Only update input if user isn't editing
-      if (!isEditingDamper) {
-        setDamperInput(newDamper.toString());
-      }
+    if (typeof last?.damper_percent === "number" && !isEditingDamper) {
+      setDamperInput(last.damper_percent.toString());
     }
-
-    // Update PID gains if they come from status (optional - depends on your API)
-    if (last?.pid_gains && Array.isArray(last.pid_gains)) {
-      setCurrentPIDGains(last.pid_gains);
-      
-      // Only update input if user isn't editing
-      if (!isEditingPID) {
-        setPidGainsInput(last.pid_gains.map(g => g.toString()));
-      }
+    if (last?.pid_gains && Array.isArray(last.pid_gains) && !isEditingPID) {
+      setPidGainsInput(last.pid_gains.map(g => g.toString()));
     }
-  }, [last, isEditingSetpoint, isEditingDamper, isEditingPID]);
+    if (last?.meat_setpoint_c && !isEditingMeatSetpoint) {
+      setMeatSetpointInput(last.meat_setpoint_c.toString());
+    }
+  }, [last, isEditingSetpoint, isEditingDamper, isEditingPID, isEditingMeatSetpoint]);
 
   const onSetpointSubmit = async (e) => {
     e.preventDefault();
@@ -145,6 +153,27 @@ export default function App() {
       alert('Failed to set setpoint. Please try again.');
     } finally {
       setIsSubmittingSetpoint(false);
+    }
+  };
+
+  const onMeatSetpointSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmittingMeatSetpoint(true);
+    
+    try {
+      const value = Number(meatSetpointInput);
+      if (isNaN(value) || value <= 0) {
+        alert('Please enter a valid number for meat setpoint');
+        return;
+      }
+      
+      await setMeatSetpoint(value);
+      setIsEditingMeatSetpoint(false);
+    } catch (error) {
+      console.error('Failed to set meat setpoint:', error);
+      alert('Failed to set meat setpoint. Please try again.');
+    } finally {
+      setIsSubmittingMeatSetpoint(false);
     }
   };
 
@@ -200,11 +229,7 @@ export default function App() {
       const gains = await loadPIDPreset(selectedPreset);
       setCurrentPIDGains(gains);
       setPidGainsInput(gains.map(g => g.toString()));
-      
-      // Apply the loaded gains immediately
       await setPIDGains(gains);
-      
-      // Clear selection after loading
       setSelectedPreset('');
     } catch (error) {
       console.error('Failed to load PID preset:', error);
@@ -223,15 +248,10 @@ export default function App() {
     setIsSavingPreset(true);
     try {
       await savePIDPreset(savePresetName.trim(), currentPIDGains);
-      
-      // Refresh the presets list
       const presets = await getPIDPresets();
       setPidPresets(presets);
-      
-      // Close dialog and clear input
       setShowSaveDialog(false);
       setSavePresetName('');
-      
       alert(`Preset "${savePresetName}" saved successfully!`);
     } catch (error) {
       console.error('Failed to save PID preset:', error);
@@ -241,26 +261,15 @@ export default function App() {
     }
   };
 
-  const handleSetpointChange = (e) => {
-    setIsEditingSetpoint(true);
-    setSetpointInput(e.target.value);
-  };
-
-  const handleDamperChange = (e) => {
-    setIsEditingDamper(true);
-    setDamperInput(e.target.value);
-  };
-
-  const handlePIDChange = (index, value) => {
-    setIsEditingPID(true);
-    const newGains = [...pidGainsInput];
-    newGains[index] = value;
-    setPidGainsInput(newGains);
-  };
-
+  // Cancel handlers
   const handleSetpointCancel = () => {
     setSetpointInput(currentSetpoint.toString());
     setIsEditingSetpoint(false);
+  };
+
+  const handleMeatSetpointCancel = () => {
+    setMeatSetpointInput('');
+    setIsEditingMeatSetpoint(false);
   };
 
   const handleDamperCancel = () => {
@@ -276,368 +285,94 @@ export default function App() {
   return (
     <div style={{ 
       fontFamily: "Inter, system-ui, sans-serif", 
-      padding: 16, 
       color: "#eaeaea", 
       background: "#0a0a0a", 
-      minHeight: "100vh" 
+      minHeight: "100vh",
+      display: "flex"
     }}>
-      <h1>BGE Controller</h1>
-      
+      {/* Controls Sidebar */}
       <div style={{ 
-        display: "grid", 
-        gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", 
-        gap: 16 
+        width: 320,
+        background: "#111", 
+        padding: 20,
+        borderRight: "1px solid #333",
+        overflowY: "auto"
       }}>
-        {/* Current Status */}
-        <div style={{ background: "#141414", padding: 12, borderRadius: 8 }}>
-          <h3>Now</h3>
-          <p>Pit: {last?.pit_temp_c?.toFixed(1) ?? "—"} °C</p>
-          <p>Meat: {last?.meat_temp_c?.toFixed?.(1) ?? "—"} °C</p>
-          <p>Setpoint: {last?.setpoint_c?.toFixed(1) ?? "—"} °C</p>
-          <p>Damper: {last?.damper_percent ?? 0}%</p>
-          <p>PID: [{currentPIDGains.map(g => g.toFixed(3)).join(', ')}]</p>
-        </div>
+        <h1 style={{ margin: "0 0 24px 0", fontSize: "24px" }}>BGE Controller</h1>
         
-        {/* Controls */}
-        <div style={{ background: "#141414", padding: 12, borderRadius: 8 }}>
-          <h3>Setpoint</h3>
-          <form onSubmit={onSetpointSubmit}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-              <input 
-                type="number" 
-                value={setpointInput}
-                onChange={handleSetpointChange}
-                onFocus={() => setIsEditingSetpoint(true)}
-                disabled={isSubmittingSetpoint}
-                min="0" 
-                max="400"
-                style={{ 
-                  padding: 4, 
-                  borderRadius: 4, 
-                  border: isEditingSetpoint ? '2px solid #5bd' : '1px solid #333',
-                  background: '#222',
-                  color: '#eaeaea'
-                }}
-              />
-              <span>°C</span>
-            </div>
-            
-            {isEditingSetpoint && (
-              <div style={{ display: "flex", gap: 8 }}>
-                <button 
-                  type="submit" 
-                  disabled={isSubmittingSetpoint}
-                  style={{ 
-                    padding: '4px 12px', 
-                    borderRadius: 4, 
-                    border: 'none',
-                    background: '#5bd',
-                    color: '#000'
-                  }}
-                >
-                  {isSubmittingSetpoint ? 'Setting...' : 'Apply'}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={handleSetpointCancel}
-                  style={{ 
-                    padding: '4px 12px', 
-                    borderRadius: 4, 
-                    border: '1px solid #666',
-                    background: 'transparent',
-                    color: '#eaeaea'
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-          </form>
-          
-          <h3 style={{ marginTop: 20 }}>Damper</h3>
-          <form onSubmit={onDamperSubmit}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-              <input 
-                type="number" 
-                value={damperInput}
-                onChange={handleDamperChange}
-                onFocus={() => setIsEditingDamper(true)}
-                disabled={isSubmittingDamper}
-                min="0" 
-                max="100"
-                style={{ 
-                  padding: 4, 
-                  borderRadius: 4, 
-                  border: isEditingDamper ? '2px solid #5bd' : '1px solid #333',
-                  background: '#222',
-                  color: '#eaeaea'
-                }}
-              />
-              <span>%</span>
-            </div>
-            
-            {isEditingDamper && (
-              <div style={{ display: "flex", gap: 8 }}>
-                <button 
-                  type="submit" 
-                  disabled={isSubmittingDamper}
-                  style={{ 
-                    padding: '4px 12px', 
-                    borderRadius: 4, 
-                    border: 'none',
-                    background: '#5bd',
-                    color: '#000'
-                  }}
-                >
-                  {isSubmittingDamper ? 'Setting...' : 'Apply'}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={handleDamperCancel}
-                  style={{ 
-                    padding: '4px 12px', 
-                    borderRadius: 4, 
-                    border: '1px solid #666',
-                    background: 'transparent',
-                    color: '#eaeaea'
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-          </form>
-        </div>
+        <StatusDisplay status={last} />
         
-        {/* PID Gains Control */}
-        <div style={{ background: "#141414", padding: 12, borderRadius: 8 }}>
-          <h3>PID Gains</h3>
-          <form onSubmit={onPIDSubmit}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 8 }}>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <label style={{ minWidth: 20 }}>P:</label>
-                <input 
-                  type="number" 
-                  step="0.001"
-                  value={pidGainsInput[0]}
-                  onChange={(e) => handlePIDChange(0, e.target.value)}
-                  onFocus={() => setIsEditingPID(true)}
-                  disabled={isSubmittingPID}
-                  style={{ 
-                    padding: 4, 
-                    borderRadius: 4, 
-                    border: isEditingPID ? '2px solid #5bd' : '1px solid #333',
-                    background: '#222',
-                    color: '#eaeaea',
-                    flex: 1
-                  }}
-                />
-              </div>
-              
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <label style={{ minWidth: 20 }}>I:</label>
-                <input 
-                  type="number" 
-                  step="0.001"
-                  value={pidGainsInput[1]}
-                  onChange={(e) => handlePIDChange(1, e.target.value)}
-                  onFocus={() => setIsEditingPID(true)}
-                  disabled={isSubmittingPID}
-                  style={{ 
-                    padding: 4, 
-                    borderRadius: 4, 
-                    border: isEditingPID ? '2px solid #5bd' : '1px solid #333',
-                    background: '#222',
-                    color: '#eaeaea',
-                    flex: 1
-                  }}
-                />
-              </div>
-              
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <label style={{ minWidth: 20 }}>D:</label>
-                <input 
-                  type="number" 
-                  step="0.001"
-                  value={pidGainsInput[2]}
-                  onChange={(e) => handlePIDChange(2, e.target.value)}
-                  onFocus={() => setIsEditingPID(true)}
-                  disabled={isSubmittingPID}
-                  style={{ 
-                    padding: 4, 
-                    borderRadius: 4, 
-                    border: isEditingPID ? '2px solid #5bd' : '1px solid #333',
-                    background: '#222',
-                    color: '#eaeaea',
-                    flex: 1
-                  }}
-                />
-              </div>
-            </div>
-            
-            {isEditingPID && (
-              <div style={{ display: "flex", gap: 8 }}>
-                <button 
-                  type="submit" 
-                  disabled={isSubmittingPID}
-                  style={{ 
-                    padding: '4px 12px', 
-                    borderRadius: 4, 
-                    border: 'none',
-                    background: '#5bd',
-                    color: '#000'
-                  }}
-                >
-                  {isSubmittingPID ? 'Setting...' : 'Apply'}
-                </button>
-                <button 
-                  type="button" 
-                  onClick={handlePIDCancel}
-                  style={{ 
-                    padding: '4px 12px', 
-                    borderRadius: 4, 
-                    border: '1px solid #666',
-                    background: 'transparent',
-                    color: '#eaeaea'
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-          </form>
-
-          {/* PID Presets Section */}
-          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #333' }}>
-            <h4 style={{ margin: '0 0 12px 0', fontSize: '14px' }}>Presets</h4>
-            
-            {/* Load Preset */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <select 
-                value={selectedPreset}
-                onChange={(e) => setSelectedPreset(e.target.value)}
-                disabled={isLoadingPreset}
-                style={{ 
-                  padding: 4, 
-                  borderRadius: 4, 
-                  border: '1px solid #333',
-                  background: '#222',
-                  color: '#eaeaea',
-                  flex: 1
-                }}
-              >
-                <option value="">Select preset...</option>
-                {pidPresets.map(preset => (
-                  <option key={preset.name} value={preset.name}>
-                    {preset.name}
-                  </option>
-                ))}
-              </select>
-              
-              <button 
-                onClick={handleLoadPreset}
-                disabled={!selectedPreset || isLoadingPreset}
-                style={{ 
-                  padding: '4px 12px', 
-                  borderRadius: 4, 
-                  border: 'none',
-                  background: selectedPreset ? '#5bd' : '#555',
-                  color: selectedPreset ? '#000' : '#aaa',
-                  cursor: selectedPreset ? 'pointer' : 'not-allowed'
-                }}
-              >
-                {isLoadingPreset ? 'Loading...' : 'Load'}
-              </button>
-            </div>
-
-            {/* Save Current Gains */}
-            <div style={{ display: "flex", gap: 8 }}>
-              <button 
-                onClick={() => setShowSaveDialog(true)}
-                style={{ 
-                  padding: '4px 12px', 
-                  borderRadius: 4, 
-                  border: '1px solid #666',
-                  background: 'transparent',
-                  color: '#eaeaea',
-                  flex: 1
-                }}
-              >
-                Save Current
-              </button>
-            </div>
-
-            {/* Save Dialog */}
-            {showSaveDialog && (
-              <div style={{ 
-                marginTop: 12, 
-                padding: 12, 
-                background: '#222', 
-                borderRadius: 6,
-                border: '1px solid #444'
-              }}>
-                <div style={{ marginBottom: 8 }}>
-                  <input 
-                    type="text" 
-                    placeholder="Preset name..."
-                    value={savePresetName}
-                    onChange={(e) => setSavePresetName(e.target.value)}
-                    disabled={isSavingPreset}
-                    style={{ 
-                      width: '100%',
-                      padding: 4, 
-                      borderRadius: 4, 
-                      border: '1px solid #333',
-                      background: '#111',
-                      color: '#eaeaea'
-                    }}
-                  />
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button 
-                    onClick={handleSavePreset}
-                    disabled={isSavingPreset || !savePresetName.trim()}
-                    style={{ 
-                      padding: '4px 12px', 
-                      borderRadius: 4, 
-                      border: 'none',
-                      background: savePresetName.trim() ? '#5bd' : '#555',
-                      color: savePresetName.trim() ? '#000' : '#aaa',
-                      flex: 1
-                    }}
-                  >
-                    {isSavingPreset ? 'Saving...' : 'Save'}
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setShowSaveDialog(false);
-                      setSavePresetName('');
-                    }}
-                    style={{ 
-                      padding: '4px 12px', 
-                      borderRadius: 4, 
-                      border: '1px solid #666',
-                      background: 'transparent',
-                      color: '#eaeaea'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <CookSettings 
+          meatType={meatType}
+          setMeatType={setMeatType}
+          meatWeight={meatWeight}
+          setMeatWeight={setMeatWeight}
+        />
         
-        {/* Chart */}
-        <div style={{ 
-          gridColumn: "1/-1", 
-          background: "#141414", 
-          padding: 12, 
-          borderRadius: 8 
-        }}>
-          <h3>Pit temperature (last ~30 min)</h3>
-          <MiniSparkline points={telemetry} />
+        <TemperatureControls 
+          setpointInput={setpointInput}
+          setSetpointInput={setSetpointInput}
+          meatSetpointInput={meatSetpointInput}
+          setMeatSetpointInput={setMeatSetpointInput}
+          isEditingSetpoint={isEditingSetpoint}
+          setIsEditingSetpoint={setIsEditingSetpoint}
+          isEditingMeatSetpoint={isEditingMeatSetpoint}
+          setIsEditingMeatSetpoint={setIsEditingMeatSetpoint}
+          isSubmittingSetpoint={isSubmittingSetpoint}
+          isSubmittingMeatSetpoint={isSubmittingMeatSetpoint}
+          onSetpointSubmit={onSetpointSubmit}
+          onMeatSetpointSubmit={onMeatSetpointSubmit}
+          onSetpointCancel={handleSetpointCancel}
+          onMeatSetpointCancel={handleMeatSetpointCancel}
+        />
+        
+        <ManualControls 
+          damperInput={damperInput}
+          setDamperInput={setDamperInput}
+          isEditingDamper={isEditingDamper}
+          setIsEditingDamper={setIsEditingDamper}
+          isSubmittingDamper={isSubmittingDamper}
+          onDamperSubmit={onDamperSubmit}
+          onDamperCancel={handleDamperCancel}
+        />
+        
+        <PIDControls 
+          pidGainsInput={pidGainsInput}
+          setPidGainsInput={setPidGainsInput}
+          isEditingPID={isEditingPID}
+          setIsEditingPID={setIsEditingPID}
+          isSubmittingPID={isSubmittingPID}
+          onPIDSubmit={onPIDSubmit}
+          onPIDCancel={handlePIDCancel}
+          pidPresets={pidPresets}
+          selectedPreset={selectedPreset}
+          setSelectedPreset={setSelectedPreset}
+          isLoadingPreset={isLoadingPreset}
+          handleLoadPreset={handleLoadPreset}
+          showSaveDialog={showSaveDialog}
+          setShowSaveDialog={setShowSaveDialog}
+          savePresetName={savePresetName}
+          setSavePresetName={setSavePresetName}
+          isSavingPreset={isSavingPreset}
+          handleSavePreset={handleSavePreset}
+        />
+      </div>
+      
+      {/* Main Chart Area */}
+      <div style={{ 
+        flex: 1, 
+        padding: 20,
+        display: "flex",
+        flexDirection: "column"
+      }}>
+        <h2 style={{ margin: "0 0 20px 0", fontSize: "20px" }}>Temperature History</h2>
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <TemperatureChart 
+            points={telemetry} 
+            status={last}
+            width={Math.min(window.innerWidth - 380, 1200)} 
+            height={Math.min(window.innerHeight - 120, 600)} 
+          />
         </div>
       </div>
     </div>

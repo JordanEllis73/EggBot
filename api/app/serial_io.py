@@ -11,6 +11,7 @@ try:
 except Exception:  # pragma: no cover
     serial = None  # type: ignore
 
+
 class ControllerIO:
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -32,7 +33,9 @@ class ControllerIO:
 
     def _open_serial(self) -> None:
         try:
-            print(f"Connecting to Serial on port {settings.serial_port} with baud rate {settings.baud}")
+            print(
+                f"Connecting to Serial on port {settings.serial_port} with baud rate {settings.baud}"
+            )
             self._ser = serial.Serial(settings.serial_port, settings.baud, timeout=1)  # type: ignore
         except serial.SerialException as e:
             raise Exception(f"Failed to connect to Arduino: {e}")
@@ -74,11 +77,11 @@ class ControllerIO:
                 if not line:
                     return None
                 try:
-                    print(line)
                     return json.loads(line)
                 except Exception:
                     return None
             except Exception:
+                print("Error reading serial")
                 return None
         return None
 
@@ -105,7 +108,9 @@ class ControllerIO:
                 msg = self._read_line()
                 if isinstance(msg, dict):
                     with self._lock:
-                        self._pit_temp_c = float(msg.get("pit_temp_c", self._pit_temp_c))
+                        self._pit_temp_c = float(
+                            msg.get("pit_temp_c", self._pit_temp_c)
+                        )
                         meat = msg.get("meat_temp_c")
                         self._meat_temp_c = float(meat) if meat is not None else None
 

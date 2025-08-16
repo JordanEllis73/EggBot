@@ -32,6 +32,27 @@ export async function setSetpoint(setpoint_c) {
   }
 }
 
+export async function setMeatSetpoint(meat_setpoint_c) {
+  try {
+    console.log('Setting meat setpoint: ', meat_setpoint_c);
+    
+    const res = await fetch(`${API}/meat_setpoint`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meat_setpoint_c })
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    const result = await res.json();
+    console.log('Meat setpoint success:', result);
+    return result;
+  } catch (error) {
+    console.error("Meat setpoint error:", error);
+    throw error;
+  }
+}
+
 export async function setDamper(damper_percent) {
   const res = await fetch(`${API}/damper`, {
     method: "POST",
