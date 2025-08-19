@@ -16,6 +16,11 @@ services:
       - SERIAL_PORT=/dev/ttyACM0
       - BAUD=115200
       - ENV=production
+      # Make sure your API binds to 0.0.0.0:8000, not 192.168.1.194:8000
+      - HOST=0.0.0.0
+      - PORT=8000
+    networks:
+      - app-network
     deploy:
       resources:
         limits:
@@ -33,6 +38,8 @@ services:
       - VITE_API_URL=http://192.168.1.194:8000
     depends_on:
       - api
+    networks:
+      - app-network
     deploy:
       resources:
         limits:
@@ -42,3 +49,7 @@ services:
 
 volumes:
   api_data:
+
+networks:
+  app-network:
+    driver: bridge
