@@ -5,6 +5,7 @@ from app.serial_io import ControllerIO
 
 router = APIRouter(prefix="", tags=["telemetry"])
 
+
 @router.get("/telemetry", response_model=TelemetryOut)
 async def telemetry(controller: ControllerIO = Depends(get_controller)):
     return {"points": controller.get_telemetry()}

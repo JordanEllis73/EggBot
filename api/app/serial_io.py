@@ -19,6 +19,7 @@ class ControllerIO:
         self._simulate = settings.simulate or (serial is None)
 
         self._setpoint_c = 110.0  # default ~225F
+        self._meat_setpoint_c = 98
         self._damper_percent = 0
         self._pit_temp_c = 25.0
         self._meat_temp_c: Optional[float] = None
@@ -48,6 +49,12 @@ class ControllerIO:
             self._setpoint_c = c
         self._send({"setpoint_c": c})
 
+    def set_meat_setpoint(self, c: float) -> None:
+        with self._lock:
+            print(f"setting meat setpoint to {c} C")
+            self._meat_setpoint_c = c
+        self._send({"meat_setpoint_c": c})
+
     def set_damper(self, percent: int) -> None:
         percent = max(0, min(100, int(percent)))
         with self._lock:
@@ -66,7 +73,7 @@ class ControllerIO:
         if self._ser and self._ser.writable():  # type: ignore
             payload = json.dumps(msg) + "\n"
             print(f"sending payload: {payload}")
-            self._ser.write(payload.encode("utf-8"))  # type: ignore
+            # self._ser.write(payload.encode("utf-8"))  # type: ignore
 
     def _read_line(self) -> Optional[dict]:
         if self._simulate:
@@ -120,6 +127,7 @@ class ControllerIO:
                     "meat_temp_c": self._meat_temp_c,
                     "damper_percent": self._damper_percent,
                     "setpoint_c": self._setpoint_c,
+                    "meat_setpoint_c": self._meat_setpoint_c,
                     "timestamp": datetime.utcnow().isoformat() + "Z",
                 }
                 self._telemetry.append(point)
@@ -135,6 +143,7 @@ class ControllerIO:
                 "meat_temp_c": self._meat_temp_c,
                 "damper_percent": self._damper_percent,
                 "setpoint_c": self._setpoint_c,
+                "meat_setpoint_c": self._meat_setpoint_c,
                 "timestamp": datetime.utcnow().isoformat() + "Z",
             }
 

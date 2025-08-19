@@ -4,6 +4,7 @@ import {
   getTelemetry, 
   setDamper, 
   setSetpoint, 
+  setMeatSetpoint,
   setPIDGains, 
   getPIDPresets, 
   loadPIDPreset, 
@@ -16,27 +17,6 @@ import TemperatureControls from "./TemperatureControls";
 import ManualControls from "./ManualControls";
 import PIDControls from "./PIDControls";
 
-// You'll need to add this to your api.jsx file
-const setMeatSetpoint = async (meat_setpoint_c) => {
-  try {
-    console.log('Setting meat setpoint: ', meat_setpoint_c);
-    
-    const res = await fetch(`/api/meat_setpoint`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ meat_setpoint_c })
-    });
-    if (!res.ok) {
-      throw new Error(`HTTP error! status: ${res.status}`);
-    }
-    const result = await res.json();
-    console.log('Meat setpoint success:', result);
-    return result;
-  } catch (error) {
-    console.error("Meat setpoint error:", error);
-    throw error;
-  }
-};
 
 export default function App() {
   const [status, setStatus] = useState(null);
@@ -44,12 +24,13 @@ export default function App() {
   
   // Current values
   const [currentSetpoint, setCurrentSetpoint] = useState(110);
+  const [currentMeatSetpoint, setCurrentMeatSetpoint] = useState(100);
   const [currentDamper, setCurrentDamper] = useState(0);
   const [currentPIDGains, setCurrentPIDGains] = useState([1.0, 0.1, 0.05]);
   
   // Input states
   const [setpointInput, setSetpointInput] = useState('110');
-  const [meatSetpointInput, setMeatSetpointInput] = useState('');
+  const [meatSetpointInput, setMeatSetpointInput] = useState('100');
   const [damperInput, setDamperInput] = useState('0');
   const [pidGainsInput, setPidGainsInput] = useState(['1.0', '0.1', '0.05']);
   const [meatType, setMeatType] = useState('');
@@ -130,7 +111,7 @@ export default function App() {
       setPidGainsInput(last.pid_gains.map(g => g.toString()));
     }
     if (last?.meat_setpoint_c && !isEditingMeatSetpoint) {
-      setMeatSetpointInput(last.meat_setpoint_c.toString());
+      setMeatSetpointInput(Math.round(last.meat_setpoint_c).toString());
     }
   }, [last, isEditingSetpoint, isEditingDamper, isEditingPID, isEditingMeatSetpoint]);
 
@@ -268,7 +249,7 @@ export default function App() {
   };
 
   const handleMeatSetpointCancel = () => {
-    setMeatSetpointInput('');
+    setMeatSetpointInput(currentMeatSetpoint.toString());
     setIsEditingMeatSetpoint(false);
   };
 

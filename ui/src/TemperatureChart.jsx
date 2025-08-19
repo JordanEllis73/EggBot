@@ -23,8 +23,9 @@ export default function TemperatureChart({ points, status, width = 800, height =
   // Extract temperature data
   const pitTemps = points.map(p => p.pit_temp_c).filter(t => t != null);
   const meatTemps = points.map(p => p.meat_temp_c).filter(t => t != null);
-  const setpointTemps = [status?.setpoint_c ? status.setpoint_c : 0, status?.meat_setpoint_c ? status.meat_setpoint_c : 0];
-  const allTemps = [...pitTemps, ...meatTemps, ...setpointTemps];
+  const setpointTemps = points.map(p => p.setpoint_c).filter(t => t != null);
+  const meatSetpointTemps = points.map(p => p.meat_setpoint_c).filter(t => t != null);
+  const allTemps = [...pitTemps, ...meatTemps, ...setpointTemps, ...meatSetpointTemps];
   
   if (allTemps.length === 0) return <div>No temperature data</div>;
   
@@ -53,6 +54,8 @@ export default function TemperatureChart({ points, status, width = 800, height =
   
   const pitPath = createPath(points.map(p => p.pit_temp_c));
   const meatPath = createPath(points.map(p => p.meat_temp_c));
+  const pitSetPath = createPath(points.map(p => p.setpoint_c));
+  const meatSetPath = createPath(points.map(p => p.meat_setpoint_c));
   
   // Setpoint lines
   const pitSetpointY = status?.setpoint_c ? getY(status.setpoint_c) : null;
@@ -127,33 +130,26 @@ export default function TemperatureChart({ points, status, width = 800, height =
           stroke="#666" 
           strokeWidth="2"
         />
-        
-        {/* Setpoint lines (dashed) */}
-        {pitSetpointY && (
-          <line
-            x1={padding.left}
-            y1={pitSetpointY}
-            x2={width - padding.right}
-            y2={pitSetpointY}
+         
+        {/* Temperature paths */}
+        {pitSetPath && (
+          <path 
+            d={pitSetPath} 
             stroke="#ff6b35"
             strokeWidth="2"
             strokeDasharray="8,4"
           />
         )}
         
-        {meatSetpointY && (
-          <line
-            x1={padding.left}
-            y1={meatSetpointY}
-            x2={width - padding.right}
-            y2={meatSetpointY}
+        {meatSetPath && (
+          <path 
+            d={meatSetPath} 
             stroke="#4ecdc4"
             strokeWidth="2"
             strokeDasharray="8,4"
           />
         )}
-        
-        {/* Temperature paths */}
+ 
         {pitPath && (
           <path 
             d={pitPath} 
