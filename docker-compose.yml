@@ -2,6 +2,7 @@
 services:
   api:
     image: ghcr.io/jordanellis73/eggbot/api:latest
+    pull_policy: missing  # Only pull if image doesn't exist locally
     restart: unless-stopped
     volumes:
       - api_data:/app/data
@@ -24,6 +25,7 @@ services:
 
   ui:
     image: ghcr.io/jordanellis73/eggbot/ui:latest
+    pull_policy: missing  # Only pull if image doesn't exist locally
     restart: unless-stopped
     ports:
       - "80:80"
