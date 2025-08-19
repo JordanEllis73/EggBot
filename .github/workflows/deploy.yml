@@ -1,6 +1,5 @@
 # .github/workflows/deploy.yml
 name: Deploy to Raspberry Pi
-
 on:
   push:
     branches: [ main ]
@@ -11,8 +10,46 @@ env:
   IMAGE_NAME_UI: jordanellis73/eggbot/ui
 
 jobs:
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api-changed: ${{ steps.changes.outputs.api }}
+      ui-changed: ${{ steps.changes.outputs.ui }}
+      compose-changed: ${{ steps.changes.outputs.compose }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+    
+    - name: Check for changes
+      id: changes
+      run: |
+        # Check if API files changed
+        if git diff --name-only HEAD~1 HEAD | grep -E "^api/"; then
+          echo "api=true" >> $GITHUB_OUTPUT
+        else
+          echo "api=false" >> $GITHUB_OUTPUT
+        fi
+        
+        # Check if UI files changed
+        if git diff --name-only HEAD~1 HEAD | grep -E "^ui/"; then
+          echo "ui=true" >> $GITHUB_OUTPUT
+        else
+          echo "ui=false" >> $GITHUB_OUTPUT
+        fi
+        
+        # Check if only docker-compose.yml changed
+        if git diff --name-only HEAD~1 HEAD | grep -E "^docker-compose\.yml$|^compose\.yml$"; then
+          echo "compose=true" >> $GITHUB_OUTPUT
+        else
+          echo "compose=false" >> $GITHUB_OUTPUT
+        fi
+
   build-and-push:
     runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.api-changed == 'true' || needs.check-changes.outputs.ui-changed == 'true'
     permissions:
       contents: read
       packages: write
@@ -20,18 +57,19 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
+      
     - name: Log in to Container Registry
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-
+        
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
     - name: Build and push API image
+      if: needs.check-changes.outputs.api-changed == 'true'
       uses: docker/build-push-action@v5
       with:
         context: ./api
@@ -44,6 +82,7 @@ jobs:
         cache-to: type=gha,mode=max
 
     - name: Build and push UI image
+      if: needs.check-changes.outputs.ui-changed == 'true'
       uses: docker/build-push-action@v5
       with:
         context: ./ui
@@ -56,27 +95,32 @@ jobs:
         cache-to: type=gha,mode=max
 
   deploy:
-    needs: build-and-push
     runs-on: self-hosted  # This will run on your Pi
-    if: github.ref == 'refs/heads/main'
+    needs: [check-changes, build-and-push]
+    # Run if images were built OR if only compose files changed
+    if: always() && (needs.build-and-push.result == 'success' || (needs.build-and-push.result == 'skipped' && needs.check-changes.outputs.compose-changed == 'true'))
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       
     - name: Login to GitHub Container Registry
+      if: needs.build-and-push.result == 'success'
       run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      
+    - name: Pull latest images
+      if: needs.build-and-push.result == 'success'
+      run: docker compose pull
       
     - name: Deploy containers
       run: |
-        # Pull latest images
-        docker compose pull
-        
         # Stop and remove old containers
         docker compose down
         
-        # Start with new images
+        # Start with new images (or existing ones if no rebuild)
         docker compose up -d
         
-        # Clean up old images
-        docker image prune -af
+        # Only clean up if we pushed new images
+        if [ "${{ needs.build-and-push.result }}" == "success" ]; then
+          docker image prune -af
+        fi
