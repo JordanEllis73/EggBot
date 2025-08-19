@@ -42,14 +42,36 @@ export default function TemperatureChart({ points, status, width = 800, height =
   const getX = (index) => padding.left + (index / (points.length - 1)) * chartWidth;
   const getY = (temp) => padding.top + ((maxTemp - temp) / tempRange) * chartHeight;
   
-  // Generate path data
+  // Fixed path creation function to handle null values properly
   const createPath = (temps) => {
-    return temps.map((temp, i) => {
-      if (temp == null) return null;
-      const x = getX(i);
-      const y = getY(temp);
-      return `${i === 0 || temps[i-1] == null ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
-    }).filter(Boolean).join(' ');
+    const pathSegments = [];
+    let currentSegment = [];
+    
+    temps.forEach((temp, i) => {
+      if (temp != null) {
+        const x = getX(i);
+        const y = getY(temp);
+        currentSegment.push({ x, y, isFirst: currentSegment.length === 0 });
+      } else {
+        // End current segment when we hit a null value
+        if (currentSegment.length > 0) {
+          pathSegments.push(currentSegment);
+          currentSegment = [];
+        }
+      }
+    });
+    
+    // Don't forget the last segment
+    if (currentSegment.length > 0) {
+      pathSegments.push(currentSegment);
+    }
+    
+    // Convert segments to path strings
+    return pathSegments.map(segment => 
+      segment.map((point, i) => 
+        `${i === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`
+      ).join(' ')
+    ).join(' ');
   };
   
   const pitPath = createPath(points.map(p => p.pit_temp_c));
@@ -131,13 +153,14 @@ export default function TemperatureChart({ points, status, width = 800, height =
           strokeWidth="2"
         />
          
-        {/* Temperature paths */}
+        {/* Temperature paths - Fixed to prevent fill issues */}
         {pitSetPath && (
           <path 
             d={pitSetPath} 
             stroke="#ff6b35"
             strokeWidth="2"
             strokeDasharray="8,4"
+            fill="none"
           />
         )}
         
@@ -147,6 +170,7 @@ export default function TemperatureChart({ points, status, width = 800, height =
             stroke="#4ecdc4"
             strokeWidth="2"
             strokeDasharray="8,4"
+            fill="none"
           />
         )}
  
