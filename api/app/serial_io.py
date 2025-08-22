@@ -24,6 +24,11 @@ class ControllerIO:
         self._pit_temp_c = 25.0
         self._meat_temp_c: Optional[float] = None
         self._telemetry: List[dict] = []
+        
+        # Track setpoint changes for debugging
+        self._setpoint_history = [(110.0, "INIT", time.time())]
+        
+        print(f"[CONTROLLER {id(self)}] INIT: setpoint={self._setpoint_c}, meat_setpoint={self._meat_setpoint_c}")
 
         if not self._simulate:
             self._open_serial()
@@ -45,7 +50,11 @@ class ControllerIO:
 
     def set_setpoint(self, c: float) -> None:
         with self._lock:
-            print(f"setting setpoint to {c} C")
+            print(f"[CONTROLLER {id(self)}] setting setpoint to {c} C (was {self._setpoint_c})")
+            self._setpoint_history.append((c, "API_SET", time.time()))
+            # Keep only last 10 changes
+            if len(self._setpoint_history) > 10:
+                self._setpoint_history = self._setpoint_history[-10:]
             self._setpoint_c = c
         self._send({"setpoint_c": c})
 
@@ -123,11 +132,18 @@ class ControllerIO:
                 msg = self._read_line()
                 if isinstance(msg, dict):
                     with self._lock:
+                        old_setpoint = self._setpoint_c
                         self._pit_temp_c = float(
                             msg.get("pit_temp_c", self._pit_temp_c)
                         )
                         meat = msg.get("meat_temp_c")
                         self._meat_temp_c = float(meat) if meat is not None else None
+                        
+                        # Check if serial message contains setpoint changes (shouldn't happen)
+                        if "setpoint_c" in msg and msg["setpoint_c"] != old_setpoint:
+                            print(f"[CONTROLLER {id(self)}] WARNING: Serial message changed setpoint {old_setpoint} -> {msg['setpoint_c']}")
+                            self._setpoint_history.append((float(msg["setpoint_c"]), "SERIAL", time.time()))
+                            self._setpoint_c = float(msg["setpoint_c"])
 
             with self._lock:
                 point = {
@@ -154,7 +170,10 @@ class ControllerIO:
                 "meat_setpoint_c": self._meat_setpoint_c,
                 "timestamp": datetime.utcnow().isoformat() + "Z",
             }
-            print(f"Received get_status call: {status_map}")
+            # Check for unexpected setpoint changes
+            recent_changes = [f"{val}@{source}" for val, source, ts in self._setpoint_history[-3:]]
+            print(f"[CONTROLLER {id(self)}] get_status call: {status_map}")
+            print(f"[CONTROLLER {id(self)}] recent setpoint history: {recent_changes}")
             return status_map
 
     def get_telemetry(self) -> list[dict]:
