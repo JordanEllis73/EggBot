@@ -30,8 +30,6 @@ services:
       - BAUD=115200
       - ENV=development
       - PYTHONPATH=/app
-    networks:
-      - dev-network
   ui:
     build:
       context: ./ui
@@ -43,9 +41,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://api:8000  # Point to your local API
-    networks:
-      - dev-network
+      - VITE_API_URL=http://localhost:8000  # Point to your local API
     depends_on:
       - api
 
