@@ -146,7 +146,7 @@ class ControllerIO:
 
     def get_status(self) -> dict:
         with self._lock:
-            return {
+            status_map = {
                 "pit_temp_c": self._pit_temp_c,
                 "meat_temp_c": self._meat_temp_c,
                 "damper_percent": self._damper_percent,
@@ -154,6 +154,8 @@ class ControllerIO:
                 "meat_setpoint_c": self._meat_setpoint_c,
                 "timestamp": datetime.utcnow().isoformat() + "Z",
             }
+            print(f"Received get_status call: {status_map}")
+            return status_map
 
     def get_telemetry(self) -> list[dict]:
         with self._lock:
