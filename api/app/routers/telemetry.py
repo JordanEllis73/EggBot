@@ -8,4 +8,4 @@ router = APIRouter(prefix="", tags=["telemetry"])
 
 @router.get("/telemetry", response_model=TelemetryOut)
 async def telemetry(controller: ControllerIO = Depends(get_controller)):
-    return await {"points": controller.get_telemetry()}
+    return {"points": controller.get_telemetry()}
