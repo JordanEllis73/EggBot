@@ -17,7 +17,10 @@ export default function MeaterControls() {
     const pollStatus = async () => {
       try {
         const meaterStatus = await getMeaterStatus();
-        setStatus(meaterStatus);
+        // Only update status if we're not in the middle of connection operations
+        if (!isConnecting && !isDisconnecting && !isScanning) {
+          setStatus(meaterStatus);
+        }
       } catch (error) {
         console.error('Failed to get Meater status:', error);
       }
@@ -27,7 +30,7 @@ export default function MeaterControls() {
     interval = setInterval(pollStatus, 2000); // Poll every 2 seconds
     
     return () => clearInterval(interval);
-  }, []);
+  }, [isConnecting, isDisconnecting, isScanning]);
 
   const handleConnect = async (e) => {
     e.preventDefault();

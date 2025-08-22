@@ -10,6 +10,7 @@ import {
   loadPIDPreset, 
   savePIDPreset 
 } from "./api";
+import { useDebounce } from "./hooks/useDebounce";
 import TemperatureChart from "./TemperatureChart";
 import StatusDisplay from "./StatusDisplay";
 import CookSettings from "./CookSettings";
@@ -58,6 +59,9 @@ export default function App() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
 
   const last = useMemo(() => status, [status]);
+  
+  // Debounce API status updates to reduce UI flicker
+  const debouncedStatus = useDebounce(last, 500);
 
   useEffect(() => {
     let t1, t2;
@@ -100,21 +104,38 @@ export default function App() {
     };
   }, []);
 
-  // Update input values when not editing
+  // Update input values when not editing and only if current values differ significantly
   useEffect(() => {
-    if (last?.setpoint_c && !isEditingSetpoint) {
-      setSetpointInput(Math.round(last.setpoint_c).toString());
+    if (debouncedStatus?.setpoint_c && !isEditingSetpoint && !isSubmittingSetpoint) {
+      const newValue = Math.round(debouncedStatus.setpoint_c).toString();
+      if (setpointInput !== newValue && Math.abs(currentSetpoint - debouncedStatus.setpoint_c) > 0.5) {
+        setSetpointInput(newValue);
+        setCurrentSetpoint(debouncedStatus.setpoint_c);
+      }
     }
-    if (typeof last?.damper_percent === "number" && !isEditingDamper) {
-      setDamperInput(last.damper_percent.toString());
+    if (typeof debouncedStatus?.damper_percent === "number" && !isEditingDamper && !isSubmittingDamper) {
+      const newValue = debouncedStatus.damper_percent.toString();
+      if (damperInput !== newValue && Math.abs(currentDamper - debouncedStatus.damper_percent) > 0.5) {
+        setDamperInput(newValue);
+        setCurrentDamper(debouncedStatus.damper_percent);
+      }
     }
-    if (last?.pid_gains && Array.isArray(last.pid_gains) && !isEditingPID) {
-      setPidGainsInput(last.pid_gains.map(g => g.toString()));
+    if (debouncedStatus?.pid_gains && Array.isArray(debouncedStatus.pid_gains) && !isEditingPID && !isSubmittingPID) {
+      const newValues = debouncedStatus.pid_gains.map(g => g.toString());
+      const hasChanged = newValues.some((val, i) => val !== pidGainsInput[i]);
+      if (hasChanged) {
+        setPidGainsInput(newValues);
+        setCurrentPIDGains(debouncedStatus.pid_gains);
+      }
     }
-    if (last?.meat_setpoint_c && !isEditingMeatSetpoint) {
-      setMeatSetpointInput(Math.round(last.meat_setpoint_c).toString());
+    if (debouncedStatus?.meat_setpoint_c && !isEditingMeatSetpoint && !isSubmittingMeatSetpoint) {
+      const newValue = Math.round(debouncedStatus.meat_setpoint_c).toString();
+      if (meatSetpointInput !== newValue && Math.abs(currentMeatSetpoint - debouncedStatus.meat_setpoint_c) > 0.5) {
+        setMeatSetpointInput(newValue);
+        setCurrentMeatSetpoint(debouncedStatus.meat_setpoint_c);
+      }
     }
-  }, [last, isEditingSetpoint, isEditingDamper, isEditingPID, isEditingMeatSetpoint]);
+  }, [debouncedStatus, isEditingSetpoint, isEditingDamper, isEditingPID, isEditingMeatSetpoint, isSubmittingSetpoint, isSubmittingDamper, isSubmittingPID, isSubmittingMeatSetpoint, setpointInput, damperInput, pidGainsInput, meatSetpointInput, currentSetpoint, currentDamper, currentMeatSetpoint]);
 
   const onSetpointSubmit = async (e) => {
     e.preventDefault();
