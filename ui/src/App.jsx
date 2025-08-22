@@ -30,11 +30,23 @@ export default function App() {
   const [currentDamper, setCurrentDamper] = useState(0);
   const [currentPIDGains, setCurrentPIDGains] = useState([1.0, 0.1, 0.05]);
   
-  // Input states
-  const [setpointInput, setSetpointInput] = useState('110');
-  const [meatSetpointInput, setMeatSetpointInput] = useState('100');
-  const [damperInput, setDamperInput] = useState('0');
-  const [pidGainsInput, setPidGainsInput] = useState(['1.0', '0.1', '0.05']);
+  // Input states with localStorage persistence
+  const [setpointInput, setSetpointInput] = useState(() => {
+    const saved = localStorage.getItem('eggbot_setpoint_input');
+    return saved || '110';
+  });
+  const [meatSetpointInput, setMeatSetpointInput] = useState(() => {
+    const saved = localStorage.getItem('eggbot_meat_setpoint_input');
+    return saved || '100';
+  });
+  const [damperInput, setDamperInput] = useState(() => {
+    const saved = localStorage.getItem('eggbot_damper_input');
+    return saved || '0';
+  });
+  const [pidGainsInput, setPidGainsInput] = useState(() => {
+    const saved = localStorage.getItem('eggbot_pid_gains_input');
+    return saved ? JSON.parse(saved) : ['1.0', '0.1', '0.05'];
+  });
   const [meatType, setMeatType] = useState('');
   const [meatWeight, setMeatWeight] = useState('');
   
@@ -65,18 +77,45 @@ export default function App() {
 
   useEffect(() => {
     let t1, t2;
+    let isMemoryConstrained = false;
+    
+    // Check if we're in a memory-constrained environment (like Pi)
+    const checkMemory = () => {
+      try {
+        if (navigator.deviceMemory && navigator.deviceMemory <= 2) {
+          isMemoryConstrained = true;
+          console.log('Detected memory-constrained environment, adjusting polling');
+        }
+      } catch (e) {
+        // Fallback for older browsers
+      }
+    };
+    
+    checkMemory();
     
     const pollStatus = async () => {
       try {
-        setStatus(await getStatus());
+        const statusData = await getStatus();
+        console.log(`[${new Date().toISOString()}] API STATUS RESPONSE:`, {
+          setpoint_c: statusData.setpoint_c,
+          meat_setpoint_c: statusData.meat_setpoint_c,
+          damper_percent: statusData.damper_percent,
+          timestamp: statusData.timestamp
+        });
+        setStatus(statusData);
       } catch (error) {
         console.error('Failed to get status:', error);
+        // On Pi, API errors might indicate memory pressure
+        if (isMemoryConstrained) {
+          console.log('Slowing down polling due to API error in memory-constrained environment');
+        }
       }
     };
     
     const pollTelemetry = async () => {
       try {
-        setTelemetry((await getTelemetry()).points || []);
+        const telemetryData = await getTelemetry();
+        setTelemetry(telemetryData.points || []);
       } catch (error) {
         console.error('Failed to get telemetry:', error);
       }
@@ -95,8 +134,12 @@ export default function App() {
     pollTelemetry();
     loadPresets();
     
-    t1 = setInterval(pollStatus, 1000);
-    t2 = setInterval(pollTelemetry, 2000);
+    // Adjust polling intervals based on environment
+    const statusInterval = isMemoryConstrained ? 2000 : 1000; // 2s on Pi vs 1s on dev
+    const telemetryInterval = isMemoryConstrained ? 5000 : 2000; // 5s on Pi vs 2s on dev
+    
+    t1 = setInterval(pollStatus, statusInterval);
+    t2 = setInterval(pollTelemetry, telemetryInterval);
     
     return () => { 
       clearInterval(t1); 
@@ -106,32 +149,66 @@ export default function App() {
 
   // Update input values when not editing and only if current values differ significantly
   useEffect(() => {
+    const timestamp = new Date().toISOString();
+    
     if (debouncedStatus?.setpoint_c && !isEditingSetpoint && !isSubmittingSetpoint) {
       const newValue = Math.round(debouncedStatus.setpoint_c).toString();
-      if (setpointInput !== newValue && Math.abs(currentSetpoint - debouncedStatus.setpoint_c) > 0.5) {
+      const shouldUpdate = setpointInput !== newValue && Math.abs(currentSetpoint - debouncedStatus.setpoint_c) > 0.5;
+      
+      console.log(`[${timestamp}] SETPOINT CHECK:`, {
+        apiValue: debouncedStatus.setpoint_c,
+        currentInput: setpointInput,
+        newValue,
+        currentSetpoint,
+        shouldUpdate,
+        isEditing: isEditingSetpoint,
+        isSubmitting: isSubmittingSetpoint
+      });
+      
+      if (shouldUpdate) {
+        console.log(`[${timestamp}] SETPOINT UPDATE: ${setpointInput} -> ${newValue}`);
         setSetpointInput(newValue);
+        localStorage.setItem('eggbot_setpoint_input', newValue);
         setCurrentSetpoint(debouncedStatus.setpoint_c);
       }
     }
+    
     if (typeof debouncedStatus?.damper_percent === "number" && !isEditingDamper && !isSubmittingDamper) {
       const newValue = debouncedStatus.damper_percent.toString();
-      if (damperInput !== newValue && Math.abs(currentDamper - debouncedStatus.damper_percent) > 0.5) {
+      const shouldUpdate = damperInput !== newValue && Math.abs(currentDamper - debouncedStatus.damper_percent) > 0.5;
+      
+      console.log(`[${timestamp}] DAMPER CHECK:`, {
+        apiValue: debouncedStatus.damper_percent,
+        currentInput: damperInput,
+        newValue,
+        currentDamper,
+        shouldUpdate
+      });
+      
+      if (shouldUpdate) {
+        console.log(`[${timestamp}] DAMPER UPDATE: ${damperInput} -> ${newValue}`);
         setDamperInput(newValue);
+        localStorage.setItem('eggbot_damper_input', newValue);
         setCurrentDamper(debouncedStatus.damper_percent);
       }
     }
-    if (debouncedStatus?.pid_gains && Array.isArray(debouncedStatus.pid_gains) && !isEditingPID && !isSubmittingPID) {
-      const newValues = debouncedStatus.pid_gains.map(g => g.toString());
-      const hasChanged = newValues.some((val, i) => val !== pidGainsInput[i]);
-      if (hasChanged) {
-        setPidGainsInput(newValues);
-        setCurrentPIDGains(debouncedStatus.pid_gains);
-      }
-    }
+    
     if (debouncedStatus?.meat_setpoint_c && !isEditingMeatSetpoint && !isSubmittingMeatSetpoint) {
       const newValue = Math.round(debouncedStatus.meat_setpoint_c).toString();
-      if (meatSetpointInput !== newValue && Math.abs(currentMeatSetpoint - debouncedStatus.meat_setpoint_c) > 0.5) {
+      const shouldUpdate = meatSetpointInput !== newValue && Math.abs(currentMeatSetpoint - debouncedStatus.meat_setpoint_c) > 0.5;
+      
+      console.log(`[${timestamp}] MEAT SETPOINT CHECK:`, {
+        apiValue: debouncedStatus.meat_setpoint_c,
+        currentInput: meatSetpointInput,
+        newValue,
+        currentMeatSetpoint,
+        shouldUpdate
+      });
+      
+      if (shouldUpdate) {
+        console.log(`[${timestamp}] MEAT SETPOINT UPDATE: ${meatSetpointInput} -> ${newValue}`);
         setMeatSetpointInput(newValue);
+        localStorage.setItem('eggbot_meat_setpoint_input', newValue);
         setCurrentMeatSetpoint(debouncedStatus.meat_setpoint_c);
       }
     }

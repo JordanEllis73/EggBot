@@ -31,6 +31,7 @@ export default function TemperatureControls({
               onChange={(e) => {
                 setIsEditingSetpoint(true);
                 setSetpointInput(e.target.value);
+                localStorage.setItem('eggbot_setpoint_input', e.target.value);
               }}
               disabled={isSubmittingSetpoint}
               min="0" 
@@ -98,6 +99,7 @@ export default function TemperatureControls({
               onChange={(e) => {
                 setIsEditingMeatSetpoint(true);
                 setMeatSetpointInput(e.target.value);
+                localStorage.setItem('eggbot_meat_setpoint_input', e.target.value);
               }}
               disabled={isSubmittingMeatSetpoint}
               min="0" 
