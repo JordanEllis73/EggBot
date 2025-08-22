@@ -1,4 +1,6 @@
-export default function TemperatureChart({ points, status, width = 800, height = 400 }) {
+import { getDisplayTemperature, formatTemperature } from './utils/temperature';
+
+export default function TemperatureChart({ points, status, meaterStatus, temperatureUnit = 'C', width = 800, height = 400 }) {
   if (!points?.length) {
     return (
       <div style={{ 
@@ -20,12 +22,33 @@ export default function TemperatureChart({ points, status, width = 800, height =
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
   
-  // Extract temperature data
-  const pitTemps = points.map(p => p.pit_temp_c).filter(t => t != null);
-  const meatTemps = points.map(p => p.meat_temp_c).filter(t => t != null);
-  const setpointTemps = points.map(p => p.setpoint_c).filter(t => t != null);
-  const meatSetpointTemps = points.map(p => p.meat_setpoint_c).filter(t => t != null);
-  const allTemps = [...pitTemps, ...meatTemps, ...setpointTemps, ...meatSetpointTemps];
+  // Extract and convert temperature data based on unit preference
+  const convertTemp = (temp) => getDisplayTemperature(temp, temperatureUnit);
+  
+  const pitTemps = points.map(p => convertTemp(p.pit_temp_c)).filter(t => t != null);
+  const meatTemps = points.map(p => convertTemp(p.meat_temp_c)).filter(t => t != null);
+  const setpointTemps = points.map(p => convertTemp(p.setpoint_c)).filter(t => t != null);
+  const meatSetpointTemps = points.map(p => convertTemp(p.meat_setpoint_c)).filter(t => t != null);
+  
+  // Add Meater temperatures if available
+  let meaterProbeTemps = [];
+  let meaterAmbientTemps = [];
+  if (meaterStatus?.is_connected && meaterStatus?.data) {
+    const meaterData = meaterStatus.data;
+    const probeTemp = temperatureUnit === 'F' ? meaterData.probe_temp_f : meaterData.probe_temp_c;
+    const ambientTemp = temperatureUnit === 'F' ? meaterData.ambient_temp_f : meaterData.ambient_temp_c;
+    
+    // For now, show current Meater values as flat lines
+    // TODO: Store Meater historical data
+    if (probeTemp != null) {
+      meaterProbeTemps = Array(points.length).fill(probeTemp);
+    }
+    if (ambientTemp != null) {
+      meaterAmbientTemps = Array(points.length).fill(ambientTemp);
+    }
+  }
+  
+  const allTemps = [...pitTemps, ...meatTemps, ...setpointTemps, ...meatSetpointTemps, ...meaterProbeTemps, ...meaterAmbientTemps];
   
   if (allTemps.length === 0) return <div>No temperature data</div>;
   
@@ -74,14 +97,16 @@ export default function TemperatureChart({ points, status, width = 800, height =
     ).join(' ');
   };
   
-  const pitPath = createPath(points.map(p => p.pit_temp_c));
-  const meatPath = createPath(points.map(p => p.meat_temp_c));
-  const pitSetPath = createPath(points.map(p => p.setpoint_c));
-  const meatSetPath = createPath(points.map(p => p.meat_setpoint_c));
+  const pitPath = createPath(points.map(p => convertTemp(p.pit_temp_c)));
+  const meatPath = createPath(points.map(p => convertTemp(p.meat_temp_c)));
+  const pitSetPath = createPath(points.map(p => convertTemp(p.setpoint_c)));
+  const meatSetPath = createPath(points.map(p => convertTemp(p.meat_setpoint_c)));
+  const meaterProbePath = meaterProbeTemps.length > 0 ? createPath(meaterProbeTemps) : null;
+  const meaterAmbientPath = meaterAmbientTemps.length > 0 ? createPath(meaterAmbientTemps) : null;
   
-  // Setpoint lines
-  const pitSetpointY = status?.setpoint_c ? getY(status.setpoint_c) : null;
-  const meatSetpointY = status?.meat_setpoint_c ? getY(status.meat_setpoint_c) : null;
+  // Setpoint lines (convert to display unit)
+  const pitSetpointY = status?.setpoint_c ? getY(convertTemp(status.setpoint_c)) : null;
+  const meatSetpointY = status?.meat_setpoint_c ? getY(convertTemp(status.meat_setpoint_c)) : null;
   
   // Generate tick marks for temperature axis
   const tempTicks = [];
@@ -90,7 +115,7 @@ export default function TemperatureChart({ points, status, width = 800, height =
     tempTicks.push({
       temp: temp,
       y: getY(temp),
-      label: `${temp}°C`
+      label: `${temp}°${temperatureUnit}`
     });
   }
   
@@ -192,6 +217,27 @@ export default function TemperatureChart({ points, status, width = 800, height =
           />
         )}
         
+        {/* Meater traces */}
+        {meaterProbePath && (
+          <path 
+            d={meaterProbePath} 
+            stroke="#c44ecb" 
+            fill="none" 
+            strokeWidth="3"
+            strokeDasharray="5,3"
+          />
+        )}
+        
+        {meaterAmbientPath && (
+          <path 
+            d={meaterAmbientPath} 
+            stroke="#ff9500" 
+            fill="none" 
+            strokeWidth="3"
+            strokeDasharray="5,3"
+          />
+        )}
+        
         {/* Axis labels */}
         {tempTicks.map((tick, i) => (
           <text 
@@ -228,7 +274,7 @@ export default function TemperatureChart({ points, status, width = 800, height =
           textAnchor="middle"
           transform={`rotate(-90 ${padding.left / 2} ${height / 2})`}
         >
-          Temperature (°C)
+          Temperature (°{temperatureUnit})
         </text>
         
         <text 
@@ -245,7 +291,7 @@ export default function TemperatureChart({ points, status, width = 800, height =
         {points.length > 0 && points[points.length - 1].pit_temp_c != null && (
           <circle 
             cx={getX(points.length - 1)} 
-            cy={getY(points[points.length - 1].pit_temp_c)} 
+            cy={getY(convertTemp(points[points.length - 1].pit_temp_c))} 
             r="4" 
             fill="#ff6b35"
             stroke="#111"
@@ -256,12 +302,34 @@ export default function TemperatureChart({ points, status, width = 800, height =
         {points.length > 0 && points[points.length - 1].meat_temp_c != null && (
           <circle 
             cx={getX(points.length - 1)} 
-            cy={getY(points[points.length - 1].meat_temp_c)} 
+            cy={getY(convertTemp(points[points.length - 1].meat_temp_c))} 
             r="4" 
             fill="#4ecdc4"
             stroke="#111"
             strokeWidth="2"
           />
+        )}
+        
+        {/* Meater current value indicators */}
+        {meaterStatus?.is_connected && meaterStatus?.data && (
+          <>
+            <circle 
+              cx={getX(points.length - 1)} 
+              cy={getY(temperatureUnit === 'F' ? meaterStatus.data.probe_temp_f : meaterStatus.data.probe_temp_c)} 
+              r="4" 
+              fill="#c44ecb"
+              stroke="#111"
+              strokeWidth="2"
+            />
+            <circle 
+              cx={getX(points.length - 1)} 
+              cy={getY(temperatureUnit === 'F' ? meaterStatus.data.ambient_temp_f : meaterStatus.data.ambient_temp_c)} 
+              r="4" 
+              fill="#ff9500"
+              stroke="#111"
+              strokeWidth="2"
+            />
+          </>
         )}
       </svg>
       
@@ -279,7 +347,7 @@ export default function TemperatureChart({ points, status, width = 800, height =
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 20, height: 3, background: '#ff6b35' }}></div>
             <span>Pit Temp: {points.length > 0 && points[points.length - 1].pit_temp_c != null 
-              ? `${points[points.length - 1].pit_temp_c.toFixed(1)}°C` : '—'}</span>
+              ? formatTemperature(convertTemp(points[points.length - 1].pit_temp_c), temperatureUnit) : '—'}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ 
@@ -288,14 +356,14 @@ export default function TemperatureChart({ points, status, width = 800, height =
               background: '#ff6b35',
               backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 4px, #111 4px, #111 6px)'
             }}></div>
-            <span>Pit Target: {status?.setpoint_c ? `${status.setpoint_c.toFixed(1)}°C` : '—'}</span>
+            <span>Pit Target: {status?.setpoint_c ? formatTemperature(convertTemp(status.setpoint_c), temperatureUnit) : '—'}</span>
           </div>
           {(points.some(p => p.meat_temp_c != null) || status?.meat_setpoint_c) && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 20, height: 3, background: '#4ecdc4' }}></div>
                 <span>Meat Temp: {points.length > 0 && points[points.length - 1].meat_temp_c != null 
-                  ? `${points[points.length - 1].meat_temp_c.toFixed(1)}°C` : '—'}</span>
+                  ? formatTemperature(convertTemp(points[points.length - 1].meat_temp_c), temperatureUnit) : '—'}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ 
@@ -304,7 +372,36 @@ export default function TemperatureChart({ points, status, width = 800, height =
                   background: '#4ecdc4',
                   backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 4px, #111 4px, #111 6px)'
                 }}></div>
-                <span>Meat Target: {status?.meat_setpoint_c ? `${status.meat_setpoint_c.toFixed(1)}°C` : '—'}</span>
+                <span>Meat Target: {status?.meat_setpoint_c ? formatTemperature(convertTemp(status.meat_setpoint_c), temperatureUnit) : '—'}</span>
+              </div>
+            </>
+          )}
+          {/* Meater legend entries */}
+          {meaterStatus?.is_connected && meaterStatus?.data && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ 
+                  width: 20, 
+                  height: 3, 
+                  background: '#c44ecb',
+                  backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, #111 2px, #111 4px)'
+                }}></div>
+                <span>Meater Probe: {formatTemperature(
+                  temperatureUnit === 'F' ? meaterStatus.data.probe_temp_f : meaterStatus.data.probe_temp_c, 
+                  temperatureUnit
+                )}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ 
+                  width: 20, 
+                  height: 3, 
+                  background: '#ff9500',
+                  backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, #111 2px, #111 4px)'
+                }}></div>
+                <span>Meater Ambient: {formatTemperature(
+                  temperatureUnit === 'F' ? meaterStatus.data.ambient_temp_f : meaterStatus.data.ambient_temp_c, 
+                  temperatureUnit
+                )}</span>
               </div>
             </>
           )}

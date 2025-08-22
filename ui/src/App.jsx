@@ -8,9 +8,11 @@ import {
   setPIDGains, 
   getPIDPresets, 
   loadPIDPreset, 
-  savePIDPreset 
+  savePIDPreset,
+  getMeaterStatus 
 } from "./api";
 import { useDebounce } from "./hooks/useDebounce";
+import { getApiTemperature, getDisplayTemperature } from "./utils/temperature";
 import TemperatureChart from "./TemperatureChart";
 import StatusDisplay from "./StatusDisplay";
 import CookSettings from "./CookSettings";
@@ -18,11 +20,13 @@ import TemperatureControls from "./TemperatureControls";
 import ManualControls from "./ManualControls";
 import PIDControls from "./PIDControls";
 import MeaterControls from "./MeaterControls";
+import TemperatureToggle from "./TemperatureToggle";
 
 
 export default function App() {
   const [status, setStatus] = useState(null);
   const [telemetry, setTelemetry] = useState([]);
+  const [meaterStatus, setMeaterStatus] = useState(null);
   
   // Current values
   const [currentSetpoint, setCurrentSetpoint] = useState(110);
@@ -56,6 +60,12 @@ export default function App() {
   });
   const [meatType, setMeatType] = useState('');
   const [meatWeight, setMeatWeight] = useState('');
+  
+  // Temperature unit preference
+  const [temperatureUnit, setTemperatureUnit] = useState(() => {
+    const saved = localStorage.getItem('eggbot_temperature_unit');
+    return saved || 'C';
+  });
   
   // Editing states
   const [isEditingSetpoint, setIsEditingSetpoint] = useState(false);
@@ -128,6 +138,15 @@ export default function App() {
       }
     };
 
+    const pollMeaterStatus = async () => {
+      try {
+        const meaterData = await getMeaterStatus();
+        setMeaterStatus(meaterData);
+      } catch (error) {
+        console.error('Failed to get Meater status:', error);
+      }
+    };
+
     const loadPresets = async () => {
       try {
         const presets = await getPIDPresets();
@@ -139,18 +158,22 @@ export default function App() {
     
     pollStatus();
     pollTelemetry();
+    pollMeaterStatus();
     loadPresets();
     
     // Adjust polling intervals based on environment
     const statusInterval = isMemoryConstrained ? 2000 : 1000; // 2s on Pi vs 1s on dev
     const telemetryInterval = isMemoryConstrained ? 5000 : 2000; // 5s on Pi vs 2s on dev
+    const meaterInterval = isMemoryConstrained ? 3000 : 2000; // 3s on Pi vs 2s on dev
     
     t1 = setInterval(pollStatus, statusInterval);
     t2 = setInterval(pollTelemetry, telemetryInterval);
+    const t3 = setInterval(pollMeaterStatus, meaterInterval);
     
     return () => { 
       clearInterval(t1); 
       clearInterval(t2); 
+      clearInterval(t3);
     };
   }, []);
 
@@ -160,7 +183,8 @@ export default function App() {
     
     if (debouncedStatus?.setpoint_c && !isEditingSetpoint && !isSubmittingSetpoint) {
       const apiValue = debouncedStatus.setpoint_c;
-      const newValue = Math.round(apiValue).toString();
+      const displayValue = getDisplayTemperature(apiValue, temperatureUnit);
+      const newValue = Math.round(displayValue).toString();
       const now = Date.now();
       
       // Check if this API value is stable (appears consistently for at least 3 calls or 2 seconds)
@@ -230,7 +254,8 @@ export default function App() {
     
     if (debouncedStatus?.meat_setpoint_c && !isEditingMeatSetpoint && !isSubmittingMeatSetpoint) {
       const apiValue = debouncedStatus.meat_setpoint_c;
-      const newValue = Math.round(apiValue).toString();
+      const displayValue = getDisplayTemperature(apiValue, temperatureUnit);
+      const newValue = Math.round(displayValue).toString();
       const now = Date.now();
       
       // Check stability for meat setpoint
@@ -272,21 +297,23 @@ export default function App() {
         setCurrentMeatSetpoint(apiValue);
       }
     }
-  }, [debouncedStatus, isEditingSetpoint, isEditingDamper, isEditingPID, isEditingMeatSetpoint, isSubmittingSetpoint, isSubmittingDamper, isSubmittingPID, isSubmittingMeatSetpoint, setpointInput, damperInput, pidGainsInput, meatSetpointInput, currentSetpoint, currentDamper, currentMeatSetpoint, apiValueStability]);
+  }, [debouncedStatus, isEditingSetpoint, isEditingDamper, isEditingPID, isEditingMeatSetpoint, isSubmittingSetpoint, isSubmittingDamper, isSubmittingPID, isSubmittingMeatSetpoint, setpointInput, damperInput, pidGainsInput, meatSetpointInput, currentSetpoint, currentDamper, currentMeatSetpoint, apiValueStability, temperatureUnit]);
 
   const onSetpointSubmit = async (e) => {
     e.preventDefault();
     setIsSubmittingSetpoint(true);
     
     try {
-      const value = Number(setpointInput);
-      if (isNaN(value)) {
+      const displayValue = Number(setpointInput);
+      if (isNaN(displayValue)) {
         alert('Please enter a valid number for setpoint');
         return;
       }
       
-      await setSetpoint(value);
-      setCurrentSetpoint(value);
+      // Convert to Celsius for API
+      const apiValue = getApiTemperature(displayValue, temperatureUnit);
+      await setSetpoint(apiValue);
+      setCurrentSetpoint(apiValue);
       setIsEditingSetpoint(false);
     } catch (error) {
       console.error('Failed to set setpoint:', error);
@@ -301,13 +328,16 @@ export default function App() {
     setIsSubmittingMeatSetpoint(true);
     
     try {
-      const value = Number(meatSetpointInput);
-      if (isNaN(value) || value <= 0) {
+      const displayValue = Number(meatSetpointInput);
+      if (isNaN(displayValue) || displayValue <= 0) {
         alert('Please enter a valid number for meat setpoint');
         return;
       }
       
-      await setMeatSetpoint(value);
+      // Convert to Celsius for API
+      const apiValue = getApiTemperature(displayValue, temperatureUnit);
+      await setMeatSetpoint(apiValue);
+      setCurrentMeatSetpoint(apiValue);
       setIsEditingMeatSetpoint(false);
     } catch (error) {
       console.error('Failed to set meat setpoint:', error);
@@ -403,12 +433,14 @@ export default function App() {
 
   // Cancel handlers
   const handleSetpointCancel = () => {
-    setSetpointInput(currentSetpoint.toString());
+    const displayValue = getDisplayTemperature(currentSetpoint, temperatureUnit);
+    setSetpointInput(Math.round(displayValue).toString());
     setIsEditingSetpoint(false);
   };
 
   const handleMeatSetpointCancel = () => {
-    setMeatSetpointInput(currentMeatSetpoint.toString());
+    const displayValue = getDisplayTemperature(currentMeatSetpoint, temperatureUnit);
+    setMeatSetpointInput(Math.round(displayValue).toString());
     setIsEditingMeatSetpoint(false);
   };
 
@@ -420,6 +452,11 @@ export default function App() {
   const handlePIDCancel = () => {
     setPidGainsInput(currentPIDGains.map(g => g.toString()));
     setIsEditingPID(false);
+  };
+
+  const handleUnitChange = (newUnit) => {
+    setTemperatureUnit(newUnit);
+    localStorage.setItem('eggbot_temperature_unit', newUnit);
   };
 
   return (
@@ -438,7 +475,13 @@ export default function App() {
         borderRight: "1px solid #333",
         overflowY: "auto"
       }}>
-        <h1 style={{ margin: "0 0 24px 0", fontSize: "24px" }}>BGE Controller</h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <h1 style={{ margin: 0, fontSize: "24px" }}>BGE Controller</h1>
+          <TemperatureToggle 
+            unit={temperatureUnit} 
+            onUnitChange={handleUnitChange} 
+          />
+        </div>
         
         <StatusDisplay status={last} />
         
@@ -464,6 +507,7 @@ export default function App() {
           onMeatSetpointSubmit={onMeatSetpointSubmit}
           onSetpointCancel={handleSetpointCancel}
           onMeatSetpointCancel={handleMeatSetpointCancel}
+          temperatureUnit={temperatureUnit}
         />
         
         <ManualControls 
@@ -497,7 +541,7 @@ export default function App() {
           handleSavePreset={handleSavePreset}
         />
         
-        <MeaterControls />
+        <MeaterControls temperatureUnit={temperatureUnit} />
       </div>
       
       {/* Main Chart Area */}
@@ -512,6 +556,8 @@ export default function App() {
           <TemperatureChart 
             points={telemetry} 
             status={last}
+            meaterStatus={meaterStatus}
+            temperatureUnit={temperatureUnit}
             width={Math.min(window.innerWidth - 380, 1200)} 
             height={Math.min(window.innerHeight - 120, 600)} 
           />

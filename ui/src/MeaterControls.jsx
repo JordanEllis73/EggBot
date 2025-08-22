@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getMeaterStatus, connectMeater, disconnectMeater, scanForMeaterDevices, scanAndConnectMeater } from './api';
+import { formatTemperature } from './utils/temperature';
 
-export default function MeaterControls() {
+export default function MeaterControls({ temperatureUnit = 'C' }) {
   const [status, setStatus] = useState(null);
   const [address, setAddress] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
@@ -96,9 +97,10 @@ export default function MeaterControls() {
     await handleConnect({ preventDefault: () => {} });
   };
 
-  const formatTemperature = (tempC) => {
-    if (typeof tempC !== 'number') return '—';
-    return `${tempC.toFixed(1)}°C`;
+  const getTemperatureValue = (data, tempType) => {
+    if (!data) return null;
+    const fieldName = `${tempType}_temp_${temperatureUnit.toLowerCase()}`;
+    return data[fieldName];
   };
 
   return (
@@ -279,8 +281,8 @@ export default function MeaterControls() {
         <div>
           <div style={{ fontSize: 12, color: "#aaa", marginBottom: 8 }}>Readings</div>
           <div style={{ fontSize: 14, lineHeight: 1.6 }}>
-            <div>Probe: <strong>{formatTemperature(status.data.probe_temp_c)}</strong></div>
-            <div>Ambient: <strong>{formatTemperature(status.data.ambient_temp_c)}</strong></div>
+            <div>Probe: <strong>{formatTemperature(getTemperatureValue(status.data, 'probe'), temperatureUnit)}</strong></div>
+            <div>Ambient: <strong>{formatTemperature(getTemperatureValue(status.data, 'ambient'), temperatureUnit)}</strong></div>
             <div>Battery: <strong>{status.data.battery_percent}%</strong></div>
           </div>
           {status.last_update && (
