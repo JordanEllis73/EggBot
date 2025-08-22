@@ -30,6 +30,13 @@ export default function App() {
   const [currentDamper, setCurrentDamper] = useState(0);
   const [currentPIDGains, setCurrentPIDGains] = useState([1.0, 0.1, 0.05]);
   
+  // Add stability tracking for API responses
+  const [apiValueStability, setApiValueStability] = useState({
+    setpoint: { value: 110, count: 0, lastChange: Date.now() },
+    meatSetpoint: { value: 100, count: 0, lastChange: Date.now() },
+    damper: { value: 0, count: 0, lastChange: Date.now() }
+  });
+  
   // Input states with localStorage persistence
   const [setpointInput, setSetpointInput] = useState(() => {
     const saved = localStorage.getItem('eggbot_setpoint_input');
@@ -152,24 +159,52 @@ export default function App() {
     const timestamp = new Date().toISOString();
     
     if (debouncedStatus?.setpoint_c && !isEditingSetpoint && !isSubmittingSetpoint) {
-      const newValue = Math.round(debouncedStatus.setpoint_c).toString();
-      const shouldUpdate = setpointInput !== newValue && Math.abs(currentSetpoint - debouncedStatus.setpoint_c) > 0.5;
+      const apiValue = debouncedStatus.setpoint_c;
+      const newValue = Math.round(apiValue).toString();
+      const now = Date.now();
+      
+      // Check if this API value is stable (appears consistently for at least 3 calls or 2 seconds)
+      setApiValueStability(prev => {
+        const current = prev.setpoint;
+        const isNewValue = Math.abs(current.value - apiValue) > 0.5;
+        
+        if (isNewValue) {
+          // New value - reset stability counter
+          return {
+            ...prev,
+            setpoint: { value: apiValue, count: 1, lastChange: now }
+          };
+        } else {
+          // Same value - increment stability
+          return {
+            ...prev,
+            setpoint: { ...current, count: current.count + 1 }
+          };
+        }
+      });
+      
+      // Only update UI if value is stable (count >= 3) or has been stable for 2+ seconds
+      const stability = apiValueStability.setpoint;
+      const isStable = stability.count >= 3 || (now - stability.lastChange) > 2000;
+      const shouldUpdate = setpointInput !== newValue && Math.abs(currentSetpoint - apiValue) > 0.5 && isStable;
       
       console.log(`[${timestamp}] SETPOINT CHECK:`, {
-        apiValue: debouncedStatus.setpoint_c,
+        apiValue,
         currentInput: setpointInput,
         newValue,
         currentSetpoint,
+        stability,
+        isStable,
         shouldUpdate,
         isEditing: isEditingSetpoint,
         isSubmitting: isSubmittingSetpoint
       });
       
       if (shouldUpdate) {
-        console.log(`[${timestamp}] SETPOINT UPDATE: ${setpointInput} -> ${newValue}`);
+        console.log(`[${timestamp}] SETPOINT UPDATE (STABLE): ${setpointInput} -> ${newValue}`);
         setSetpointInput(newValue);
         localStorage.setItem('eggbot_setpoint_input', newValue);
-        setCurrentSetpoint(debouncedStatus.setpoint_c);
+        setCurrentSetpoint(apiValue);
       }
     }
     
@@ -194,25 +229,50 @@ export default function App() {
     }
     
     if (debouncedStatus?.meat_setpoint_c && !isEditingMeatSetpoint && !isSubmittingMeatSetpoint) {
-      const newValue = Math.round(debouncedStatus.meat_setpoint_c).toString();
-      const shouldUpdate = meatSetpointInput !== newValue && Math.abs(currentMeatSetpoint - debouncedStatus.meat_setpoint_c) > 0.5;
+      const apiValue = debouncedStatus.meat_setpoint_c;
+      const newValue = Math.round(apiValue).toString();
+      const now = Date.now();
+      
+      // Check stability for meat setpoint
+      setApiValueStability(prev => {
+        const current = prev.meatSetpoint;
+        const isNewValue = Math.abs(current.value - apiValue) > 0.5;
+        
+        if (isNewValue) {
+          return {
+            ...prev,
+            meatSetpoint: { value: apiValue, count: 1, lastChange: now }
+          };
+        } else {
+          return {
+            ...prev,
+            meatSetpoint: { ...current, count: current.count + 1 }
+          };
+        }
+      });
+      
+      const stability = apiValueStability.meatSetpoint;
+      const isStable = stability.count >= 3 || (now - stability.lastChange) > 2000;
+      const shouldUpdate = meatSetpointInput !== newValue && Math.abs(currentMeatSetpoint - apiValue) > 0.5 && isStable;
       
       console.log(`[${timestamp}] MEAT SETPOINT CHECK:`, {
-        apiValue: debouncedStatus.meat_setpoint_c,
+        apiValue,
         currentInput: meatSetpointInput,
         newValue,
         currentMeatSetpoint,
+        stability,
+        isStable,
         shouldUpdate
       });
       
       if (shouldUpdate) {
-        console.log(`[${timestamp}] MEAT SETPOINT UPDATE: ${meatSetpointInput} -> ${newValue}`);
+        console.log(`[${timestamp}] MEAT SETPOINT UPDATE (STABLE): ${meatSetpointInput} -> ${newValue}`);
         setMeatSetpointInput(newValue);
         localStorage.setItem('eggbot_meat_setpoint_input', newValue);
-        setCurrentMeatSetpoint(debouncedStatus.meat_setpoint_c);
+        setCurrentMeatSetpoint(apiValue);
       }
     }
-  }, [debouncedStatus, isEditingSetpoint, isEditingDamper, isEditingPID, isEditingMeatSetpoint, isSubmittingSetpoint, isSubmittingDamper, isSubmittingPID, isSubmittingMeatSetpoint, setpointInput, damperInput, pidGainsInput, meatSetpointInput, currentSetpoint, currentDamper, currentMeatSetpoint]);
+  }, [debouncedStatus, isEditingSetpoint, isEditingDamper, isEditingPID, isEditingMeatSetpoint, isSubmittingSetpoint, isSubmittingDamper, isSubmittingPID, isSubmittingMeatSetpoint, setpointInput, damperInput, pidGainsInput, meatSetpointInput, currentSetpoint, currentDamper, currentMeatSetpoint, apiValueStability]);
 
   const onSetpointSubmit = async (e) => {
     e.preventDefault();

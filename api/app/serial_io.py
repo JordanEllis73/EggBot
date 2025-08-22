@@ -49,11 +49,19 @@ class ControllerIO:
             self._setpoint_c = c
         self._send({"setpoint_c": c})
 
+    def get_setpoint(self) -> float:
+        with self._lock:
+            return self._setpoint_c
+
     def set_meat_setpoint(self, c: float) -> None:
         with self._lock:
             print(f"setting meat setpoint to {c} C")
             self._meat_setpoint_c = c
         self._send({"meat_setpoint_c": c})
+
+    def get_meat_setpoint(self) -> None:
+        with self._lock:
+            return self._meat_setpoint_c
 
     def set_damper(self, percent: int) -> None:
         percent = max(0, min(100, int(percent)))

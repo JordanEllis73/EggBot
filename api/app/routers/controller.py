@@ -23,7 +23,7 @@ async def set_setpoint(
 ):
     print(f"Received data: {data}")
     controller.set_setpoint(data.setpoint_c)
-    return {"ok": True, "setpoint_c": data.setpoint_c}
+    return {"ok": True, "setpoint_c": controller.get_setpoint()}
 
 
 @router.post("/meat_setpoint")
@@ -32,7 +32,7 @@ async def set_meat_setpoint(
 ):
     print("received meat_setpoint")
     controller.set_meat_setpoint(data.meat_setpoint_c)
-    return {"ok": True, "setpoint_c": data.meat_setpoint_c}
+    return {"ok": True, "setpoint_c": controller.get_meat_setpoint()}
 
 
 @router.post("/damper")
