@@ -12,7 +12,8 @@ export default function TemperatureControls({
   onSetpointSubmit,
   onMeatSetpointSubmit,
   onSetpointCancel,
-  onMeatSetpointCancel
+  onMeatSetpointCancel,
+  temperatureUnit = 'C'
 }) {
   return (
     <div style={{ background: "#1a1a1a", padding: 16, borderRadius: 8, marginBottom: 20 }}>
@@ -35,7 +36,7 @@ export default function TemperatureControls({
               }}
               disabled={isSubmittingSetpoint}
               min="0" 
-              max="400"
+              max={temperatureUnit === 'F' ? "750" : "400"}
               style={{ 
                 flex: 1,
                 padding: 8, 
@@ -46,7 +47,7 @@ export default function TemperatureControls({
                 fontSize: 14
               }}
             />
-            <span style={{ fontSize: 14 }}>°C</span>
+            <span style={{ fontSize: 14 }}>°{temperatureUnit}</span>
           </div>
           
           {isEditingSetpoint && (
@@ -103,7 +104,7 @@ export default function TemperatureControls({
               }}
               disabled={isSubmittingMeatSetpoint}
               min="0" 
-              max="200"
+              max={temperatureUnit === 'F' ? "400" : "200"}
               placeholder="Optional"
               style={{ 
                 flex: 1,
@@ -115,7 +116,7 @@ export default function TemperatureControls({
                 fontSize: 14
               }}
             />
-            <span style={{ fontSize: 14 }}>°C</span>
+            <span style={{ fontSize: 14 }}>°{temperatureUnit}</span>
           </div>
           
           {isEditingMeatSetpoint && (

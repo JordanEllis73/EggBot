@@ -475,6 +475,32 @@ export default function App() {
   };
 
   const handleUnitChange = (newUnit) => {
+    // Convert current input values from old unit to new unit
+    if (temperatureUnit !== newUnit) {
+      const convertInputValue = (inputValue, fromUnit, toUnit) => {
+        if (!inputValue || inputValue === '') return inputValue;
+        const numValue = Number(inputValue);
+        if (isNaN(numValue)) return inputValue;
+        
+        const celsiusValue = getApiTemperature(numValue, fromUnit);
+        const newValue = getDisplayTemperature(celsiusValue, toUnit);
+        return Math.round(newValue).toString();
+      };
+      
+      // Convert setpoint inputs if not currently being edited
+      if (!isEditingSetpoint) {
+        const convertedSetpoint = convertInputValue(setpointInput, temperatureUnit, newUnit);
+        setSetpointInput(convertedSetpoint);
+        localStorage.setItem('eggbot_setpoint_input', convertedSetpoint);
+      }
+      
+      if (!isEditingMeatSetpoint) {
+        const convertedMeatSetpoint = convertInputValue(meatSetpointInput, temperatureUnit, newUnit);
+        setMeatSetpointInput(convertedMeatSetpoint);
+        localStorage.setItem('eggbot_meat_setpoint_input', convertedMeatSetpoint);
+      }
+    }
+    
     setTemperatureUnit(newUnit);
     localStorage.setItem('eggbot_temperature_unit', newUnit);
   };
