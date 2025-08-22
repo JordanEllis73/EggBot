@@ -31,7 +31,18 @@ class BluetoothScanner:
         if not BLUETOOTH_AVAILABLE:
             print("Bluetooth not available - cannot scan for devices")
             return []
+        
+        # Try primary scanning method
+        devices = self._scan_primary(scan_time)
+        if devices:
+            return devices
             
+        # If primary fails, try alternative method
+        print("Primary scan failed, trying alternative approach...")
+        return self._scan_alternative(scan_time)
+    
+    def _scan_primary(self, scan_time: float) -> List[str]:
+        """Primary scanning method using bluepy3 Scanner"""
         try:
             # Create scanner
             self.scanner = btle.Scanner()
@@ -59,21 +70,53 @@ class BluetoothScanner:
                     meater_devices.append(device.addr.upper())
                     
             if not meater_devices:
-                print("No Meater devices found")
+                print("No Meater devices found with primary scan")
                 
             return meater_devices
             
         except Exception as e:
-            print(f"Error scanning for devices: {e}")
+            print(f"Error in primary scan: {e}")
             return []
         finally:
             if self.scanner:
                 try:
-                    # Stop scanning
                     self.scanner.stop()
                 except:
                     pass
                 self.scanner = None
+    
+    def _scan_alternative(self, scan_time: float) -> List[str]:
+        """Alternative scanning method without requiring BLE management"""
+        try:
+            import subprocess
+            import re
+            
+            print("Using alternative Bluetooth scanning via hcitool...")
+            
+            # Use hcitool lescan for BLE devices
+            cmd = ["timeout", str(int(scan_time)), "hcitool", "lescan"]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=scan_time + 2)
+            
+            meater_devices = []
+            
+            # Parse output for Meater devices
+            for line in result.stdout.split('\n'):
+                if 'meater' in line.lower():
+                    # Extract MAC address from line like "AA:BB:CC:DD:EE:FF MEATER"
+                    mac_match = re.search(r'([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})', line)
+                    if mac_match:
+                        mac_addr = mac_match.group(1).upper()
+                        print(f"Found Meater device (alternative): {mac_addr}")
+                        meater_devices.append(mac_addr)
+            
+            if not meater_devices:
+                print("No Meater devices found with alternative scan")
+                
+            return meater_devices
+            
+        except Exception as e:
+            print(f"Error in alternative scan: {e}")
+            return []
     
     def get_device_info(self, address: str) -> Dict[str, Any]:
         """

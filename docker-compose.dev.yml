@@ -7,7 +7,9 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./api:/app
-      - /run/dbus:/run/dbus:ro
+      - /run/dbus:/run/dbus:rw
+      - /var/run/dbus:/var/run/dbus:rw
+      - /sys/class/bluetooth:/sys/class/bluetooth:ro
     ports:
       - "8000:8000"
     # map serial device only when connected locally
@@ -15,11 +17,14 @@ services:
       - "/dev/ttyACM0:/dev/ttyACM0"
     group_add:
       - "dialout"   # 'dialout' on many systems; adjust as needed
-    # Add bluetooth capabilities
+    # Add bluetooth capabilities and access
     privileged: true
+    network_mode: "host"
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
+      - NET_RAW
+      - NET_BIND_SERVICE
     environment:
       - SERIAL_PORT=/dev/ttyACM0
       - BAUD=115200
