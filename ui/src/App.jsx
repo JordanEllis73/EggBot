@@ -27,6 +27,7 @@ export default function App() {
   const [status, setStatus] = useState(null);
   const [telemetry, setTelemetry] = useState([]);
   const [meaterStatus, setMeaterStatus] = useState(null);
+  const [meaterHistory, setMeaterHistory] = useState([]);
   
   // Current values
   const [currentSetpoint, setCurrentSetpoint] = useState(110);
@@ -142,6 +143,25 @@ export default function App() {
       try {
         const meaterData = await getMeaterStatus();
         setMeaterStatus(meaterData);
+        
+        // Store Meater data in history if connected and has valid data
+        if (meaterData?.is_connected && meaterData?.data) {
+          const timestamp = Date.now();
+          const historyPoint = {
+            timestamp,
+            probe_temp_c: meaterData.data.probe_temp_c,
+            ambient_temp_c: meaterData.data.ambient_temp_c,
+            probe_temp_f: meaterData.data.probe_temp_f,
+            ambient_temp_f: meaterData.data.ambient_temp_f,
+            battery_percent: meaterData.data.battery_percent
+          };
+          
+          setMeaterHistory(prev => {
+            const newHistory = [...prev, historyPoint];
+            // Keep only last 1000 points (similar to telemetry management)
+            return newHistory.length > 1000 ? newHistory.slice(-1000) : newHistory;
+          });
+        }
       } catch (error) {
         console.error('Failed to get Meater status:', error);
       }
@@ -557,6 +577,7 @@ export default function App() {
             points={telemetry} 
             status={last}
             meaterStatus={meaterStatus}
+            meaterHistory={meaterHistory}
             temperatureUnit={temperatureUnit}
             width={Math.min(window.innerWidth - 380, 1200)} 
             height={Math.min(window.innerHeight - 120, 600)} 

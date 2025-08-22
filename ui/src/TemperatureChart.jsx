@@ -1,6 +1,6 @@
 import { getDisplayTemperature, formatTemperature } from './utils/temperature';
 
-export default function TemperatureChart({ points, status, meaterStatus, temperatureUnit = 'C', width = 800, height = 400 }) {
+export default function TemperatureChart({ points, status, meaterStatus, meaterHistory = [], temperatureUnit = 'C', width = 800, height = 400 }) {
   if (!points?.length) {
     return (
       <div style={{ 
@@ -30,22 +30,60 @@ export default function TemperatureChart({ points, status, meaterStatus, tempera
   const setpointTemps = points.map(p => convertTemp(p.setpoint_c)).filter(t => t != null);
   const meatSetpointTemps = points.map(p => convertTemp(p.meat_setpoint_c)).filter(t => t != null);
   
-  // Add Meater temperatures if available
+  // Add Meater temperatures from historical data
   let meaterProbeTemps = [];
   let meaterAmbientTemps = [];
-  if (meaterStatus?.is_connected && meaterStatus?.data) {
-    const meaterData = meaterStatus.data;
-    const probeTemp = temperatureUnit === 'F' ? meaterData.probe_temp_f : meaterData.probe_temp_c;
-    const ambientTemp = temperatureUnit === 'F' ? meaterData.ambient_temp_f : meaterData.ambient_temp_c;
+  
+  if (meaterHistory.length > 0) {
+    // Create time-aligned arrays for Meater data
+    // Assume telemetry points represent the last X measurements at 2-second intervals
+    const timeSpan = points.length * 2; // 2-second intervals
+    const chartStartTime = Date.now() - (timeSpan * 1000);
     
-    // For now, show current Meater values as flat lines
-    // TODO: Store Meater historical data
-    if (probeTemp != null) {
-      meaterProbeTemps = Array(points.length).fill(probeTemp);
-    }
-    if (ambientTemp != null) {
-      meaterAmbientTemps = Array(points.length).fill(ambientTemp);
-    }
+    // For each telemetry point, find the closest Meater reading in time
+    meaterProbeTemps = points.map((_, index) => {
+      const pointTime = chartStartTime + (index * 2000); // 2-second intervals
+      
+      // Find closest Meater reading to this time point
+      let closestReading = null;
+      let minTimeDiff = Infinity;
+      
+      for (const meaterPoint of meaterHistory) {
+        const timeDiff = Math.abs(meaterPoint.timestamp - pointTime);
+        if (timeDiff < minTimeDiff && timeDiff < 10000) { // Within 10 seconds
+          minTimeDiff = timeDiff;
+          closestReading = meaterPoint;
+        }
+      }
+      
+      if (closestReading) {
+        const tempC = closestReading.probe_temp_c;
+        return tempC != null ? convertTemp(tempC) : null;
+      }
+      return null;
+    });
+    
+    meaterAmbientTemps = points.map((_, index) => {
+      const pointTime = chartStartTime + (index * 2000); // 2-second intervals
+      
+      // Find closest Meater reading to this time point
+      let closestReading = null;
+      let minTimeDiff = Infinity;
+      
+      for (const meaterPoint of meaterHistory) {
+        const timeDiff = Math.abs(meaterPoint.timestamp - pointTime);
+        if (timeDiff < minTimeDiff && timeDiff < 10000) { // Within 10 seconds
+          minTimeDiff = timeDiff;
+          closestReading = meaterPoint;
+        }
+      }
+      
+      if (closestReading) {
+        const tempC = closestReading.ambient_temp_c;
+        return tempC != null ? convertTemp(tempC) : null;
+      }
+      return null;
+    });
   }
   
   const allTemps = [...pitTemps, ...meatTemps, ...setpointTemps, ...meatSetpointTemps, ...meaterProbeTemps, ...meaterAmbientTemps];
@@ -311,25 +349,26 @@ export default function TemperatureChart({ points, status, meaterStatus, tempera
         )}
         
         {/* Meater current value indicators */}
-        {meaterStatus?.is_connected && meaterStatus?.data && (
-          <>
-            <circle 
-              cx={getX(points.length - 1)} 
-              cy={getY(temperatureUnit === 'F' ? meaterStatus.data.probe_temp_f : meaterStatus.data.probe_temp_c)} 
-              r="4" 
-              fill="#c44ecb"
-              stroke="#111"
-              strokeWidth="2"
-            />
-            <circle 
-              cx={getX(points.length - 1)} 
-              cy={getY(temperatureUnit === 'F' ? meaterStatus.data.ambient_temp_f : meaterStatus.data.ambient_temp_c)} 
-              r="4" 
-              fill="#ff9500"
-              stroke="#111"
-              strokeWidth="2"
-            />
-          </>
+        {meaterProbeTemps.length > 0 && meaterProbeTemps[meaterProbeTemps.length - 1] != null && (
+          <circle 
+            cx={getX(points.length - 1)} 
+            cy={getY(meaterProbeTemps[meaterProbeTemps.length - 1])} 
+            r="4" 
+            fill="#c44ecb"
+            stroke="#111"
+            strokeWidth="2"
+          />
+        )}
+        
+        {meaterAmbientTemps.length > 0 && meaterAmbientTemps[meaterAmbientTemps.length - 1] != null && (
+          <circle 
+            cx={getX(points.length - 1)} 
+            cy={getY(meaterAmbientTemps[meaterAmbientTemps.length - 1])} 
+            r="4" 
+            fill="#ff9500"
+            stroke="#111"
+            strokeWidth="2"
+          />
         )}
       </svg>
       
@@ -377,32 +416,34 @@ export default function TemperatureChart({ points, status, meaterStatus, tempera
             </>
           )}
           {/* Meater legend entries */}
-          {meaterStatus?.is_connected && meaterStatus?.data && (
+          {(meaterProbeTemps.length > 0 || meaterAmbientTemps.length > 0) && (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ 
-                  width: 20, 
-                  height: 3, 
-                  background: '#c44ecb',
-                  backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, #111 2px, #111 4px)'
-                }}></div>
-                <span>Meater Probe: {formatTemperature(
-                  temperatureUnit === 'F' ? meaterStatus.data.probe_temp_f : meaterStatus.data.probe_temp_c, 
-                  temperatureUnit
-                )}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ 
-                  width: 20, 
-                  height: 3, 
-                  background: '#ff9500',
-                  backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, #111 2px, #111 4px)'
-                }}></div>
-                <span>Meater Ambient: {formatTemperature(
-                  temperatureUnit === 'F' ? meaterStatus.data.ambient_temp_f : meaterStatus.data.ambient_temp_c, 
-                  temperatureUnit
-                )}</span>
-              </div>
+              {meaterProbeTemps.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ 
+                    width: 20, 
+                    height: 3, 
+                    background: '#c44ecb',
+                    backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, #111 2px, #111 4px)'
+                  }}></div>
+                  <span>Meater Probe: {meaterProbeTemps[meaterProbeTemps.length - 1] != null 
+                    ? formatTemperature(meaterProbeTemps[meaterProbeTemps.length - 1], temperatureUnit) 
+                    : '—'}</span>
+                </div>
+              )}
+              {meaterAmbientTemps.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ 
+                    width: 20, 
+                    height: 3, 
+                    background: '#ff9500',
+                    backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, #111 2px, #111 4px)'
+                  }}></div>
+                  <span>Meater Ambient: {meaterAmbientTemps[meaterAmbientTemps.length - 1] != null 
+                    ? formatTemperature(meaterAmbientTemps[meaterAmbientTemps.length - 1], temperatureUnit) 
+                    : '—'}</span>
+                </div>
+              )}
             </>
           )}
         </div>
