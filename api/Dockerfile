@@ -71,5 +71,5 @@ COPY . .
 # Expose port
 EXPOSE 8000
 
-# Production command (no reload, more workers)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+# Production command (single worker for hardware control)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
