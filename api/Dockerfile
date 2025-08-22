@@ -5,6 +5,8 @@ FROM python:3.12.11-slim-bookworm AS base
 RUN apt-get update && apt-get install -y \
     gcc \
     curl \
+    bluetooth \
+    bluez \
     && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip first to avoid version parsing issues

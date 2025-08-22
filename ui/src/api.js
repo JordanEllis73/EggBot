@@ -114,3 +114,44 @@ export async function savePIDPreset(presetName, gains) {
   if (!response.ok) throw new Error('Failed to save PID preset');
   return response.json();
 }
+
+// Meater API functions
+export async function getMeaterStatus() {
+  const response = await fetch(`${API}/meater/status`);
+  if (!response.ok) throw new Error('Failed to get Meater status');
+  return response.json();
+}
+
+export async function connectMeater(address) {
+  const response = await fetch(`${API}/meater/connect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address })
+  });
+  if (!response.ok) throw new Error('Failed to connect to Meater');
+  return response.json();
+}
+
+export async function disconnectMeater() {
+  const response = await fetch(`${API}/meater/disconnect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  if (!response.ok) throw new Error('Failed to disconnect Meater');
+  return response.json();
+}
+
+export async function scanForMeaterDevices() {
+  const response = await fetch(`${API}/meater/scan`);
+  if (!response.ok) throw new Error('Failed to scan for Meater devices');
+  return response.json();
+}
+
+export async function scanAndConnectMeater() {
+  const response = await fetch(`${API}/meater/scan-and-connect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  if (!response.ok) throw new Error('Failed to start scan and connect');
+  return response.json();
+}

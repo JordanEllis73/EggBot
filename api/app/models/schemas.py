@@ -40,3 +40,31 @@ class SavePresetRequest(BaseModel):
 
 class TelemetryOut(BaseModel):
     points: List[Status]
+
+
+class MeaterConnectIn(BaseModel):
+    address: str = Field(min_length=17, max_length=17, pattern=r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$')
+
+
+class MeaterData(BaseModel):
+    probe_temp_c: float
+    probe_temp_f: float
+    ambient_temp_c: float
+    ambient_temp_f: float
+    battery_percent: int
+    address: str
+    firmware: str
+    id: str
+
+
+class MeaterStatus(BaseModel):
+    is_connected: bool
+    is_connecting: bool
+    is_scanning: bool
+    address: Optional[str] = None
+    last_update: Optional[str] = None
+    data: Optional[MeaterData] = None
+
+
+class MeaterDeviceList(BaseModel):
+    devices: List[str]

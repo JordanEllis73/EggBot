@@ -16,6 +16,7 @@ import CookSettings from "./CookSettings";
 import TemperatureControls from "./TemperatureControls";
 import ManualControls from "./ManualControls";
 import PIDControls from "./PIDControls";
+import MeaterControls from "./MeaterControls";
 
 
 export default function App() {
@@ -337,6 +338,8 @@ export default function App() {
           isSavingPreset={isSavingPreset}
           handleSavePreset={handleSavePreset}
         />
+        
+        <MeaterControls />
       </div>
       
       {/* Main Chart Area */}
