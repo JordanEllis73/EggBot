@@ -24,9 +24,9 @@ class ADCConfig:
 @dataclass
 class ServoConfig:
     """Servo motor configuration"""
-    min_pulse_width: int = 500   # Microseconds for 0° position
-    max_pulse_width: int = 2500  # Microseconds for 180° position  
-    center_pulse_width: int = 1500  # Microseconds for 90° position
+    min_pulse_width: int = 1033  # Microseconds for 48° position (closed damper)
+    max_pulse_width: int = 1833  # Microseconds for 120° position (open damper)
+    center_pulse_width: int = 1433  # Microseconds for 84° position (center)
     pwm_frequency: int = 50      # Hz
     max_speed: float = 30.0      # Degrees per second
     position_tolerance: float = 2.0  # Degrees
