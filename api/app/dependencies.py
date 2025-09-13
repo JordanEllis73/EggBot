@@ -5,14 +5,23 @@ from typing import Optional
 from app.config import settings
 
 # Import appropriate controller based on configuration
-try:
-    # Try Pi-native controller first
-    from app.pi_native_io import PiNativeControllerIO as ControllerIO
-    print("Using Pi-native controller")
-except ImportError:
-    # Fallback to serial controller
-    from app.serial_io import ControllerIO
-    print("Using serial controller (fallback)")
+if settings.pi_native:
+    # Force Pi-native controller when PI_NATIVE=true
+    try:
+        from app.pi_native_io import PiNativeControllerIO as ControllerIO
+        print("Using Pi-native controller (forced)")
+    except ImportError as e:
+        print(f"ERROR: PI_NATIVE=true but pi-native controller unavailable: {e}")
+        raise RuntimeError("Pi-native controller required but not available")
+else:
+    # Try Pi-native controller first, fallback to serial
+    try:
+        from app.pi_native_io import PiNativeControllerIO as ControllerIO
+        print("Using Pi-native controller")
+    except ImportError:
+        # Fallback to serial controller
+        from app.serial_io import ControllerIO
+        print("Using serial controller (fallback)")
 
 # Global singleton instance with explicit locking
 _controller_instance: Optional[ControllerIO] = None
