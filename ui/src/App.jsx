@@ -9,7 +9,14 @@ import {
   getPIDPresets, 
   loadPIDPreset, 
   savePIDPreset,
-  getMeaterStatus 
+  getMeaterStatus,
+  getControlMode,
+  setControlMode,
+  // Enhanced Pi-native API functions
+  getAllTemperatures,
+  getSystemStatus,
+  getProbeStatus,
+  checkPiNativeAvailability
 } from "./api";
 import { useDebounce } from "./hooks/useDebounce";
 import { getApiTemperature, getDisplayTemperature } from "./utils/temperature";
@@ -21,6 +28,7 @@ import ManualControls from "./ManualControls";
 import PIDControls from "./PIDControls";
 import MeaterControls from "./MeaterControls";
 import TemperatureToggle from "./TemperatureToggle";
+import ControlModeToggle from "./ControlModeToggle";
 
 
 export default function App() {
@@ -34,6 +42,7 @@ export default function App() {
   const [currentMeatSetpoint, setCurrentMeatSetpoint] = useState(100);
   const [currentDamper, setCurrentDamper] = useState(0);
   const [currentPIDGains, setCurrentPIDGains] = useState([1.0, 0.1, 0.05]);
+  const [controlMode, setControlModeState] = useState('manual');
   
   // Add stability tracking for API responses
   const [apiValueStability, setApiValueStability] = useState({
@@ -182,9 +191,9 @@ export default function App() {
     loadPresets();
     
     // Adjust polling intervals based on environment
-    const statusInterval = isMemoryConstrained ? 2000 : 1000; // 2s on Pi vs 1s on dev
+    const statusInterval = isMemoryConstrained ? 1000 : 250; // 1s on Pi vs 250ms on dev for faster response
     const telemetryInterval = isMemoryConstrained ? 5000 : 2000; // 5s on Pi vs 2s on dev
-    const meaterInterval = isMemoryConstrained ? 3000 : 2000; // 3s on Pi vs 2s on dev
+    const meaterInterval = isMemoryConstrained ? 3000 : 1000; // 3s on Pi vs 1s on dev
     
     t1 = setInterval(pollStatus, statusInterval);
     t2 = setInterval(pollTelemetry, telemetryInterval);
@@ -317,7 +326,13 @@ export default function App() {
         setCurrentMeatSetpoint(apiValue);
       }
     }
-  }, [debouncedStatus, isEditingSetpoint, isEditingDamper, isEditingPID, isEditingMeatSetpoint, isSubmittingSetpoint, isSubmittingDamper, isSubmittingPID, isSubmittingMeatSetpoint, setpointInput, damperInput, pidGainsInput, meatSetpointInput, currentSetpoint, currentDamper, currentMeatSetpoint, apiValueStability, temperatureUnit]);
+    
+    // Update control mode from status
+    if (debouncedStatus?.control_mode && debouncedStatus.control_mode !== controlMode) {
+      console.log(`[${timestamp}] CONTROL MODE UPDATE: ${controlMode} -> ${debouncedStatus.control_mode}`);
+      setControlModeState(debouncedStatus.control_mode);
+    }
+  }, [debouncedStatus, isEditingSetpoint, isEditingDamper, isEditingPID, isEditingMeatSetpoint, isSubmittingSetpoint, isSubmittingDamper, isSubmittingPID, isSubmittingMeatSetpoint, setpointInput, damperInput, pidGainsInput, meatSetpointInput, currentSetpoint, currentDamper, currentMeatSetpoint, apiValueStability, temperatureUnit, controlMode]);
 
   const onSetpointSubmit = async (e) => {
     e.preventDefault();
@@ -505,6 +520,16 @@ export default function App() {
     localStorage.setItem('eggbot_temperature_unit', newUnit);
   };
 
+  const handleControlModeChange = async (newMode) => {
+    try {
+      await setControlMode(newMode);
+      setControlModeState(newMode);
+    } catch (error) {
+      console.error('Failed to set control mode:', error);
+      throw error; // Let the ControlModeToggle component handle the error
+    }
+  };
+
   return (
     <div style={{ 
       fontFamily: "Inter, system-ui, sans-serif", 
@@ -530,6 +555,11 @@ export default function App() {
         </div>
         
         <StatusDisplay status={last} />
+        
+        <ControlModeToggle 
+          controlMode={controlMode}
+          onControlModeChange={handleControlModeChange}
+        />
         
         <CookSettings 
           meatType={meatType}
@@ -564,6 +594,7 @@ export default function App() {
           isSubmittingDamper={isSubmittingDamper}
           onDamperSubmit={onDamperSubmit}
           onDamperCancel={handleDamperCancel}
+          disabled={controlMode === 'automatic'}
         />
         
         <PIDControls 

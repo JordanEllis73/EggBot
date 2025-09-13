@@ -1,0 +1,39 @@
+{
+  "configurations": [
+    {
+      "name": "Arduino Uno",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "/usr/share/arduino/hardware/arduino/avr/cores/arduino",
+        "/usr/share/arduino/hardware/arduino/avr/variants/standard", 
+        "/usr/share/arduino/libraries/**",
+        "/usr/share/arduino/hardware/tools/avr/avr/include/**"
+      ],
+      "defines": [
+        "ARDUINO=10819",
+        "ARDUINO_AVR_UNO",
+        "ARDUINO_ARCH_AVR",
+        "F_CPU=16000000L",
+        "AVR",
+        "__AVR__",
+        "__AVR_ATmega328P__",
+        "__OPTIMIZE__"
+      ],
+      "compilerPath": "/usr/bin/avr-gcc",
+      "cStandard": "c99",
+      "cppStandard": "c++11",
+      "intelliSenseMode": "linux-gcc-x64",
+      "compilerArgs": [
+        "-mmcu=atmega328p",
+        "-DF_CPU=16000000L",
+        "-DARDUINO=10819",
+        "-DARDUINO_AVR_UNO",
+        "-DARDUINO_ARCH_AVR",
+        "-fno-exceptions",
+        "-fno-rtti",
+        "-Os"
+      ]
+    }
+  ],
+  "version": 4
+}

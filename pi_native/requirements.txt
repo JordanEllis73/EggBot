@@ -1,0 +1,16 @@
+# Pi-native EggBot requirements
+# Core hardware libraries
+adafruit-circuitpython-ads1x15>=2.2.0
+pigpio>=1.78
+board>=1.0
+busio>=5.0
+
+# Existing dependencies (from main API)
+fastapi>=0.68.0
+uvicorn[standard]>=0.15.0
+pydantic>=1.8.0
+python-multipart>=0.0.5
+
+# Additional utilities
+numpy>=1.21.0
+scipy>=1.7.0

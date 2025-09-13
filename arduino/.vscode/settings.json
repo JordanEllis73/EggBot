@@ -1,0 +1,74 @@
+{
+  // C++ formatting and linting
+  "C_Cpp.clang_format_style": "file",
+  "C_Cpp.clang_format_fallbackStyle": "Google",
+  "C_Cpp.default.cppStandard": "c++11",
+  "C_Cpp.default.cStandard": "c99",
+  
+  // Arduino-specific
+  "C_Cpp.default.defines": [
+    "ARDUINO=10819",
+    "ARDUINO_AVR_UNO",
+    "ARDUINO_ARCH_AVR",
+    "F_CPU=16000000L",
+    "AVR",
+    "__AVR__",
+    "__AVR_ATmega328P__"
+  ],
+  
+  "C_Cpp.default.includePath": [
+    "${workspaceFolder}/**",
+    "/usr/share/arduino/hardware/arduino/avr/cores/arduino",
+    "/usr/share/arduino/hardware/arduino/avr/variants/standard",
+    "/usr/share/arduino/libraries/**"
+  ],
+  
+  // Formatting
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.formatOnType": false,
+  "editor.insertSpaces": true,
+  "editor.tabSize": 2,
+  "editor.rulers": [80],
+  
+  // Files
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  
+  // Language-specific settings
+  "[cpp]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.tabSize": 2
+  },
+  "[c]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools", 
+    "editor.tabSize": 2
+  },
+  
+  // Arduino INO files treated as C++
+  "files.associations": {
+    "*.ino": "cpp"
+  },
+  
+  // Exclude build artifacts
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/build": true,
+    "**/*.bak": true
+  },
+  
+  // Search exclude
+  "search.exclude": {
+    "**/build": true,
+    "**/*.bak": true
+  },
+  
+  // IntelliSense
+  "C_Cpp.intelliSenseEngine": "default",
+  "C_Cpp.errorSquiggles": "enabled"
+}

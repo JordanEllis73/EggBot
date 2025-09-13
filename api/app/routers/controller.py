@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
-from app.models.schemas import Status, SetpointIn, MeatSetpointIn, DamperIn, PIDGainsIn
+from app.models.schemas import Status, SetpointIn, MeatSetpointIn, DamperIn, PIDGainsIn, ControlModeIn
 from app.dependencies import get_controller
 from app.serial_io import ControllerIO
 
@@ -49,3 +49,16 @@ async def set_pid_gains(
 ):
     controller.set_pid_gains(*data.pid_gains)
     return {"ok": True, "pid_gains": data.pid_gains}
+
+
+@router.post("/control_mode")
+async def set_control_mode(
+    data: ControlModeIn, controller: ControllerIO = Depends(get_controller)
+):
+    controller.set_control_mode(data.control_mode)
+    return {"ok": True, "control_mode": data.control_mode}
+
+
+@router.get("/control_mode")
+async def get_control_mode(controller: ControllerIO = Depends(get_controller)):
+    return {"control_mode": controller.get_control_mode()}

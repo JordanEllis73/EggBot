@@ -1,0 +1,33 @@
+# Pi-native EggBot requirements for Raspberry Pi deployment
+
+# Core hardware libraries for Raspberry Pi
+adafruit-circuitpython-ads1x15>=2.2.0
+pigpio>=1.78
+board>=1.0
+busio>=5.0
+
+# GPIO and hardware control
+RPi.GPIO>=0.7.0
+gpiozero>=1.6.0
+
+# FastAPI and web server
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+python-multipart>=0.0.5
+
+# Data models and validation
+pydantic>=2.0.0
+
+# Utilities and math
+numpy>=1.21.0
+scipy>=1.9.0
+
+# Optional plotting support
+matplotlib>=3.5.0
+
+# Logging and configuration
+python-dotenv>=1.0.0
+
+# Development and testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0

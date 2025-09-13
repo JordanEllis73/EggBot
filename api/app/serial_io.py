@@ -23,6 +23,7 @@ class ControllerIO:
         self._damper_percent = 0
         self._pit_temp_c = 25.0
         self._meat_temp_c: Optional[float] = None
+        self._control_mode = "manual"  # default to manual control
         self._telemetry: List[dict] = []
         
         # Track setpoint changes for debugging
@@ -83,6 +84,21 @@ class ControllerIO:
             print(f"Updating PID gains to {kp}, {ki}, {kd}")
             self._pid_gains = [kp, ki, kd]
         self._send({"pid_gains": [kp, ki, kd]})
+    
+    def set_control_mode(self, mode: str) -> None:
+        """Set control mode: 'manual' or 'automatic'"""
+        if mode not in ["manual", "automatic"]:
+            raise ValueError(f"Invalid control mode: {mode}. Use 'manual' or 'automatic'")
+        
+        with self._lock:
+            print(f"Setting control mode to {mode}")
+            self._control_mode = mode
+        self._send({"control_mode": mode})
+    
+    def get_control_mode(self) -> str:
+        """Get current control mode"""
+        with self._lock:
+            return getattr(self, '_control_mode', 'manual')
 
     def _send(self, msg: dict) -> None:
         if self._simulate:
@@ -90,18 +106,29 @@ class ControllerIO:
         if self._ser and self._ser.writable():  # type: ignore
             payload = json.dumps(msg) + "\n"
             print(f"sending payload: {payload}")
-            # self._ser.write(payload.encode("utf-8"))  # type: ignore
+            self._ser.write(payload.encode("utf-8"))  # type: ignore
 
     def _read_line(self) -> Optional[dict]:
         if self._simulate:
             return None
-        if self._ser and self._ser.readable():  # type: ignore
+        if self._ser and self._ser.readable():
             try:
-                line = self._ser.readline().decode("utf-8").strip()  # type: ignore
+                line = self._ser.readline().decode("utf-8").strip()
                 if not line:
                     return None
                 try:
-                    return json.loads(line)
+                    msg = json.loads(line)
+                    # Handle Arduino acknowledgments and errors
+                    if "ack" in msg:
+                        print(f"Arduino ACK: {msg['ack']} = {msg.get('value', 'N/A')}")
+                        return None  # Don't process as temperature data
+                    elif "error" in msg:
+                        print(f"Arduino ERROR: {msg['error']}")
+                        return None
+                    elif "status" in msg:
+                        print(f"Arduino STATUS: {msg['status']}")
+                        return None
+                    return msg
                 except Exception:
                     return None
             except Exception:
@@ -131,6 +158,7 @@ class ControllerIO:
             else:
                 msg = self._read_line()
                 if isinstance(msg, dict):
+                    print(f"Received MSG: {msg}")
                     with self._lock:
                         old_setpoint = self._setpoint_c
                         self._pit_temp_c = float(
@@ -155,10 +183,10 @@ class ControllerIO:
                     "timestamp": datetime.utcnow().isoformat() + "Z",
                 }
                 self._telemetry.append(point)
-                if len(self._telemetry) > 1800:  # ~30 min at 1s
-                    self._telemetry = self._telemetry[-1800:]
+                if len(self._telemetry) > 7200:  # ~30 min at 250ms (4x more points)
+                    self._telemetry = self._telemetry[-7200:]
 
-            time.sleep(1.0)
+            time.sleep(0.25)  # 250ms for faster simulation updates
 
     def get_status(self) -> dict:
         with self._lock:
@@ -168,6 +196,7 @@ class ControllerIO:
                 "damper_percent": self._damper_percent,
                 "setpoint_c": self._setpoint_c,
                 "meat_setpoint_c": self._meat_setpoint_c,
+                "control_mode": self._control_mode,
                 "timestamp": datetime.utcnow().isoformat() + "Z",
             }
             # Check for unexpected setpoint changes

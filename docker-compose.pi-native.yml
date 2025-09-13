@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  eggbot-pi-native:
+    build:
+      context: .
+      dockerfile: Dockerfile.pi-native
+    container_name: eggbot-pi-native
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - /dev/i2c-1:/dev/i2c-1  # I2C device access
+      - /dev/gpiomem:/dev/gpiomem  # GPIO memory access
+    devices:
+      - "/dev/i2c-1:/dev/i2c-1"
+      - "/dev/gpiomem:/dev/gpiomem"
+    privileged: true  # Required for GPIO access
+    environment:
+      - PI_NATIVE=true
+      - SIMULATE=false
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+    depends_on:
+      - pigpiod
+    networks:
+      - eggbot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  pigpiod:
+    image: debian:bullseye-slim
+    container_name: pigpiod
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /dev:/dev
+    command: >
+      bash -c "
+        apt-get update &&
+        apt-get install -y pigpio &&
+        pigpiod -g
+      "
+    networks:
+      - eggbot-network
+
+  eggbot-ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: eggbot-ui
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    depends_on:
+      - eggbot-pi-native
+    networks:
+      - eggbot-network
+
+networks:
+  eggbot-network:
+    driver: bridge

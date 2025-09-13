@@ -2,7 +2,17 @@ import threading
 import os
 import time
 from typing import Optional
-from app.serial_io import ControllerIO
+from app.config import settings
+
+# Import appropriate controller based on configuration
+try:
+    # Try Pi-native controller first
+    from app.pi_native_io import PiNativeControllerIO as ControllerIO
+    print("Using Pi-native controller")
+except ImportError:
+    # Fallback to serial controller
+    from app.serial_io import ControllerIO
+    print("Using serial controller (fallback)")
 
 # Global singleton instance with explicit locking
 _controller_instance: Optional[ControllerIO] = None

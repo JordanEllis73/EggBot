@@ -5,11 +5,27 @@ export default function ManualControls({
   setIsEditingDamper,
   isSubmittingDamper,
   onDamperSubmit,
-  onDamperCancel
+  onDamperCancel,
+  disabled = false
 }) {
   return (
     <div style={{ background: "#1a1a1a", padding: 16, borderRadius: 8, marginBottom: 20 }}>
       <h3 style={{ margin: "0 0 16px 0" }}>Manual Controls</h3>
+      
+      {disabled && (
+        <div style={{ 
+          marginBottom: 12, 
+          padding: 8, 
+          background: '#2a2a2a', 
+          borderRadius: 4,
+          fontSize: 11,
+          color: '#aaa',
+          borderLeft: '3px solid #ff9500'
+        }}>
+          <strong>Disabled:</strong> Manual controls are disabled in automatic mode. 
+          Switch to manual mode to adjust damper directly.
+        </div>
+      )}
       
       <div>
         <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#aaa" }}>
@@ -21,10 +37,12 @@ export default function ManualControls({
               type="number" 
               value={damperInput}
               onChange={(e) => {
-                setIsEditingDamper(true);
-                setDamperInput(e.target.value);
+                if (!disabled) {
+                  setIsEditingDamper(true);
+                  setDamperInput(e.target.value);
+                }
               }}
-              disabled={isSubmittingDamper}
+              disabled={isSubmittingDamper || disabled}
               min="0" 
               max="100"
               style={{ 
@@ -32,9 +50,10 @@ export default function ManualControls({
                 padding: 8, 
                 borderRadius: 4, 
                 border: isEditingDamper ? '2px solid #5bd' : '1px solid #333',
-                background: '#222',
-                color: '#eaeaea',
-                fontSize: 14
+                background: disabled ? '#111' : '#222',
+                color: disabled ? '#666' : '#eaeaea',
+                fontSize: 14,
+                cursor: disabled ? 'not-allowed' : 'default'
               }}
             />
             <span style={{ fontSize: 14 }}>%</span>

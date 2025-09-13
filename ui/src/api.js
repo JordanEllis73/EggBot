@@ -155,3 +155,195 @@ export async function scanAndConnectMeater() {
   if (!response.ok) throw new Error('Failed to start scan and connect');
   return response.json();
 }
+
+export async function setControlMode(control_mode) {
+  const response = await fetch(`${API}/control_mode`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ control_mode })
+  });
+  if (!response.ok) throw new Error('Failed to set control mode');
+  return response.json();
+}
+
+export async function getControlMode() {
+  const response = await fetch(`${API}/control_mode`);
+  if (!response.ok) throw new Error('Failed to get control mode');
+  return response.json();
+}
+
+// Pi-native enhanced API functions
+export async function getSystemStatus() {
+  try {
+    const response = await fetch(`${API}/pi/system/status`);
+    if (!response.ok) {
+      // Fallback to legacy API if pi-native not available
+      return await getStatus();
+    }
+    return response.json();
+  } catch (error) {
+    // Fallback to legacy API
+    console.warn('Pi-native API not available, using legacy API');
+    return await getStatus();
+  }
+}
+
+export async function getAllTemperatures() {
+  try {
+    const response = await fetch(`${API}/pi/temperatures`);
+    if (!response.ok) throw new Error('Failed to get temperatures');
+    return response.json();
+  } catch (error) {
+    // Fallback to legacy status
+    const status = await getStatus();
+    return {
+      pit_temp_c: status.pit_temp_c,
+      meat_temp_1_c: status.meat_temp_c, // Legacy compatibility
+      meat_temp_2_c: null,
+      ambient_temp_c: null,
+      connected_probes: status.pit_temp_c !== null ? ['pit_probe'] : [],
+      timestamp: status.timestamp
+    };
+  }
+}
+
+export async function getProbeStatus() {
+  try {
+    const response = await fetch(`${API}/pi/probes/status`);
+    if (!response.ok) throw new Error('Failed to get probe status');
+    return response.json();
+  } catch (error) {
+    console.warn('Pi-native probe status not available');
+    return {};
+  }
+}
+
+export async function getEnhancedTelemetry() {
+  try {
+    const response = await fetch(`${API}/pi/telemetry/enhanced`);
+    if (!response.ok) {
+      // Fallback to legacy telemetry
+      return await getTelemetry();
+    }
+    return response.json();
+  } catch (error) {
+    // Fallback to legacy telemetry
+    return await getTelemetry();
+  }
+}
+
+export async function clearTelemetry() {
+  try {
+    const response = await fetch(`${API}/pi/telemetry/clear`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) throw new Error('Failed to clear telemetry');
+    return response.json();
+  } catch (error) {
+    console.warn('Clear telemetry not available');
+    throw error;
+  }
+}
+
+export async function getPIDTuningInfo() {
+  try {
+    const response = await fetch(`${API}/pi/pid/tuning-info`);
+    if (!response.ok) throw new Error('Failed to get PID tuning info');
+    return response.json();
+  } catch (error) {
+    console.warn('PID tuning info not available');
+    return null;
+  }
+}
+
+export async function getPiNativePIDPresets() {
+  try {
+    const response = await fetch(`${API}/pi/pid/presets`);
+    if (!response.ok) throw new Error('Failed to get Pi-native PID presets');
+    return response.json();
+  } catch (error) {
+    // Fallback to legacy presets
+    return await getPIDPresets();
+  }
+}
+
+export async function loadPiNativePIDPreset(presetName) {
+  try {
+    const response = await fetch(`${API}/pi/pid/preset/load`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preset_name: presetName })
+    });
+    if (!response.ok) throw new Error('Failed to load Pi-native PID preset');
+    return response.json();
+  } catch (error) {
+    // Fallback to legacy preset loading
+    console.warn('Pi-native preset loading not available, using legacy method');
+    return await loadPIDPreset(presetName);
+  }
+}
+
+export async function calibrateProbe(probeName, actualTemperature) {
+  try {
+    const response = await fetch(`${API}/pi/probes/calibrate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        probe_name: probeName, 
+        actual_temperature: actualTemperature 
+      })
+    });
+    if (!response.ok) throw new Error('Failed to calibrate probe');
+    return response.json();
+  } catch (error) {
+    console.warn('Probe calibration not available');
+    throw error;
+  }
+}
+
+export async function getPerformanceStats() {
+  try {
+    const response = await fetch(`${API}/pi/system/performance`);
+    if (!response.ok) throw new Error('Failed to get performance stats');
+    return response.json();
+  } catch (error) {
+    console.warn('Performance stats not available');
+    return null;
+  }
+}
+
+export async function getSafetyStatus() {
+  try {
+    const response = await fetch(`${API}/pi/safety/status`);
+    if (!response.ok) throw new Error('Failed to get safety status');
+    return response.json();
+  } catch (error) {
+    console.warn('Safety status not available');
+    return null;
+  }
+}
+
+export async function resetSafetyShutdown() {
+  try {
+    const response = await fetch(`${API}/pi/safety/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) throw new Error('Failed to reset safety shutdown');
+    return response.json();
+  } catch (error) {
+    console.warn('Safety reset not available');
+    throw error;
+  }
+}
+
+// Utility function to check if Pi-native features are available
+export async function checkPiNativeAvailability() {
+  try {
+    const response = await fetch(`${API}/pi/system/status`);
+    return response.ok;
+  } catch (error) {
+    return false;
+  }
+}

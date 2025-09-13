@@ -1,0 +1,36 @@
+# docker-compose.dev-nobluetooth.yml - Development without Bluetooth
+services:
+  api:
+    build:
+      context: ./api
+      target: development
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./api:/app
+    ports:
+      - "8000:8000"
+    devices:
+      - "/dev/ttyACM0:/dev/ttyACM0"
+    # Simulate mode without serial device
+    environment:
+      - SIMULATE=false
+      - ENV=development
+      - PYTHONPATH=/app
+  ui:
+    build:
+      context: ./ui
+      target: development
+    command: sh -c "npm run dev"
+    volumes:
+      - ./ui:/ui
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://api:8000  # Point to the API service within Docker network
+    depends_on:
+      - api
+
+networks:
+  dev-network:
+    driver: bridge

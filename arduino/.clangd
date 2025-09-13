@@ -1,0 +1,73 @@
+# .clangd configuration for Arduino EggBot Controller
+# Provides LSP support with Arduino-specific settings
+
+# Compilation database fallback
+CompileFlags:
+  # Arduino-specific defines
+  Add:
+    # Arduino core defines
+    - -DARDUINO=10819
+    - -DARDUINO_AVR_UNO
+    - -DARDUINO_ARCH_AVR
+    - -DF_CPU=16000000L
+    
+    # AVR GCC specific
+    - -mmcu=atmega328p
+    - -DAVR
+    - -D__AVR__
+    - -D__AVR_ATmega328P__
+    
+    # Standard includes
+    - -I/usr/share/arduino/hardware/arduino/avr/cores/arduino
+    - -I/usr/share/arduino/hardware/arduino/avr/variants/standard
+    - -I/usr/share/arduino/libraries
+    
+    # Project includes
+    - -I.
+    - -Ieggbot_controller
+    
+    # C++ standard for Arduino
+    - -std=c++11
+    - -fno-exceptions
+    - -fno-rtti
+    
+    # Optimization and warnings
+    - -Os
+    - -Wall
+    - -Wextra
+    - -Wno-unused-parameter
+    
+  # Remove problematic flags
+  Remove:
+    - -march=*
+    - -mtune=*
+
+# Diagnostics configuration
+Diagnostics:
+  # Suppress common Arduino false positives
+  Suppress:
+    - unused-parameter
+    - missing-prototypes
+    - sign-compare
+  
+  # Enable useful warnings
+  UnusedIncludes: Strict
+  MissingIncludes: Strict
+
+# Index configuration  
+Index:
+  Background: Build
+  StandardLibrary: Yes
+
+# Hover and completion
+Hover:
+  ShowAKA: Yes
+
+Completion:
+  AllScopes: Yes
+
+# Semantic highlighting
+SemanticHighlighting: Yes
+
+# Cross-file rename support
+CrossFileRename: Yes

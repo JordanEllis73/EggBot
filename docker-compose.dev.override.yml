@@ -1,0 +1,10 @@
+services:
+  api:
+    volumes:
+      - ./api:/app
+    devices: []
+    privileged: false
+    network_mode: "bridge"
+    cap_add: []
+    ports:
+      - "8000:8000"
