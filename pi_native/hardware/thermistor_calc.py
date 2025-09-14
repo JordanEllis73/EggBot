@@ -73,7 +73,7 @@ class ThermistorCalculator:
     
     def voltage_to_resistance(self, voltage: float, series_resistor: int) -> float:
         """Convert measured voltage to thermistor resistance using voltage divider"""
-        if voltage <= 0 or voltage >= self.supply_voltage:
+        if voltage <= 0.001 or voltage >= self.supply_voltage:
             raise ValueError(f"Invalid voltage {voltage}V (supply: {self.supply_voltage}V)")
         
         # Voltage divider: Vout = Vcc * R_thermistor / (R_series + R_thermistor)
