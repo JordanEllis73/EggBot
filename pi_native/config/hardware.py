@@ -40,9 +40,9 @@ THERMISTOR_CONFIGS = {
         b_coefficient=3950,
         series_resistor=10000,
         steinhart_hart=SteinhartHartCoefficients(
-            A=0.001129148,
-            B=0.000234125, 
-            C=0.0000000876741
+            A=0.0007343140544,
+            B=0.0002157437229, 
+            C=0.0000000951568577
         ),
         offset_c=0.0
     ),
@@ -54,9 +54,9 @@ THERMISTOR_CONFIGS = {
         b_coefficient=3950,
         series_resistor=10000,
         steinhart_hart=SteinhartHartCoefficients(
-            A=0.001129148,
-            B=0.000234125,
-            C=0.0000000876741
+            A=0.0007343140544,
+            B=0.0002157437229, 
+            C=0.0000000951568577
         ),
         offset_c=0.0
     ),
@@ -68,9 +68,9 @@ THERMISTOR_CONFIGS = {
         b_coefficient=3950,
         series_resistor=10000,
         steinhart_hart=SteinhartHartCoefficients(
-            A=0.001129148,
-            B=0.000234125,
-            C=0.0000000876741
+            A=0.0007343140544,
+            B=0.0002157437229, 
+            C=0.0000000951568577
         ),
         offset_c=0.0
     ),
@@ -82,9 +82,9 @@ THERMISTOR_CONFIGS = {
         b_coefficient=3950,
         series_resistor=10000,
         steinhart_hart=SteinhartHartCoefficients(
-            A=0.001129148,
-            B=0.000234125,
-            C=0.0000000876741
+            A=0.0007343140544,
+            B=0.0002157437229, 
+            C=0.0000000951568577
         ),
         offset_c=0.0
     )
