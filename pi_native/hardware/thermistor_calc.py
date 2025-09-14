@@ -78,7 +78,7 @@ class ThermistorCalculator:
         
         # Voltage divider: Vout = Vcc * R_thermistor / (R_series + R_thermistor)
         # Solving for R_thermistor: R_thermistor = R_series * Vout / (Vcc - Vout)
-        resistance = series_resistor * voltage / (self.supply_voltage - voltage)
+        resistance = series_resistor * self.supply_voltage / voltage - series_resistor
         return resistance
     
     def resistance_to_temperature_beta(self, resistance: float, config: ThermistorConfig) -> float:
