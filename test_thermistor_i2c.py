@@ -41,12 +41,14 @@ def test_thermistor_readings():
         )
         print("✓ ADS1115 initialized successfully")
         
-        # Initialize thermistor calculators for each probe
-        calculators = {}
+        # Initialize single thermistor calculator with supply voltage
+        calculator = ThermistorCalculator(supply_voltage=hardware_config.adc.supply_voltage)
+        
+        # Configure each channel with the appropriate thermistor config
         for channel, probe_name in PROBE_CHANNEL_MAP.items():
             config = hardware_config.get_probe_config(channel)
-            calculators[probe_name] = ThermistorCalculator(config)
-        print("✓ Thermistor calculators initialized")
+            calculator.set_probe_config(channel, config)
+        print("✓ Thermistor calculator initialized")
         
         print("\nStarting temperature readings (Press Ctrl+C to stop)...")
         print("-" * 60)
@@ -63,16 +65,14 @@ def test_thermistor_readings():
                     
                     if reading and reading.voltage is not None:
                         # Calculate temperature using thermistor calculator
-                        calculator = calculators.get(probe_name)
-                        if calculator:
-                            temp_c = calculator.voltage_to_temperature(reading.voltage)
-                            temp_f = temp_c * 9/5 + 32 if temp_c is not None else None
-                            
+                        temp_c = calculator.voltage_to_temperature(reading.voltage, channel)
+                        temp_f = temp_c * 9/5 + 32 if temp_c is not None else None
+                        
+                        if temp_c is not None:
                             print(f"  Ch{channel} ({probe_name:12}): {reading.voltage:.3f}V -> "
-                                  f"{temp_c:.1f}°C ({temp_f:.1f}°F)" if temp_c else 
-                                  f"  Ch{channel} ({probe_name:12}): {reading.voltage:.3f}V -> ERROR")
+                                  f"{temp_c:.1f}°C ({temp_f:.1f}°F)")
                         else:
-                            print(f"  Ch{channel} ({probe_name:12}): {reading.voltage:.3f}V -> No calculator")
+                            print(f"  Ch{channel} ({probe_name:12}): {reading.voltage:.3f}V -> ERROR")
                     else:
                         print(f"  Ch{channel} ({probe_name:12}): ERROR - No reading")
                         
