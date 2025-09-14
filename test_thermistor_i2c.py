@@ -37,7 +37,7 @@ def test_thermistor_readings():
         print("Initializing ADS1115...")
         adc_manager = ADS1115Manager(
             i2c_address=hardware_config.adc.i2c_address,
-            supply_voltage=hardware_config.adc.supply_voltage
+            simulate=False
         )
         print("✓ ADS1115 initialized successfully")
         
