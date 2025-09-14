@@ -82,11 +82,12 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build and push API image
+    - name: Build and push Pi-native API image
       if: needs.check-changes.outputs.api-changed == 'true'
       uses: docker/build-push-action@v5
       with:
-        context: ./api
+        context: .
+        file: ./Dockerfile.pi-native
         platforms: linux/arm64
         push: true
         tags: |
@@ -126,15 +127,15 @@ jobs:
       
     - name: Pull latest images
       if: needs.build-and-push.result == 'success'
-      run: docker compose pull
+      run: docker compose -f docker-compose.pi-native.yml pull
       
     - name: Deploy containers
       run: |
         # Stop and remove old containers
-        docker compose down
+        docker compose -f docker-compose.pi-native.yml down
         
         # Start with new images (or existing ones if no rebuild)
-        docker compose up -d
+        docker compose -f docker-compose.pi-native.yml up -d
         
         # Only clean up if we pushed new images
         if [ "${{ needs.build-and-push.result }}" == "success" ]; then
