@@ -1,6 +1,6 @@
 """Hardware configuration for Pi-native EggBot"""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict
 from pi_native.hardware.thermistor_calc import ThermistorConfig, SteinhartHartCoefficients
 
@@ -104,9 +104,9 @@ CHANNEL_PROBE_MAP = {v: k for k, v in PROBE_CHANNEL_MAP.items()}
 @dataclass
 class HardwareConfig:
     """Complete hardware configuration"""
-    gpio: GPIOConfig = GPIOConfig()
-    adc: ADCConfig = ADCConfig()
-    servo: ServoConfig = ServoConfig()
+    gpio: GPIOConfig = field(default_factory=GPIOConfig)
+    adc: ADCConfig = field(default_factory=ADCConfig)
+    servo: ServoConfig = field(default_factory=ServoConfig)
     thermistors: Dict[str, ThermistorConfig] = None
     
     def __post_init__(self):
