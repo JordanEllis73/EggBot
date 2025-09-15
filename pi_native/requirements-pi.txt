@@ -2,9 +2,8 @@
 
 # Core hardware libraries for Raspberry Pi
 adafruit-circuitpython-ads1x15>=2.2.0
+adafruit-blinka>=8.0.0
 pigpio>=1.78
-board>=1.0
-busio>=5.0
 
 # GPIO and hardware control
 RPi.GPIO>=0.7.0
