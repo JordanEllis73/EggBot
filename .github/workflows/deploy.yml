@@ -39,6 +39,12 @@ jobs:
           echo "force-rebuild=false" >> $GITHUB_OUTPUT
         fi
         
+        # Check for restart-only keywords  
+        if echo "$COMMIT_MSG" | grep -iE "\[restart\]|\[redeploy\]|\[restart.containers\]"; then
+          echo "compose=true" >> $GITHUB_OUTPUT
+          echo "🔄 Container restart requested in commit message!"
+        fi
+        
         # Check if API files changed
         if git diff --name-only HEAD~1 HEAD | grep -E "^api/"; then
           echo "api=true" >> $GITHUB_OUTPUT
@@ -139,10 +145,11 @@ jobs:
         docker ps -q --filter "publish=8000" | xargs -r docker stop 2>/dev/null || true
         docker ps -aq --filter "publish=8000" | xargs -r docker rm 2>/dev/null || true
         
-        # Start with new images (or existing ones if no rebuild)
-        docker compose -f docker-compose.pi-native.yml up -d
-        
-        # Only clean up if we pushed new images
+        # Always pull latest images if build was successful
         if [ "${{ needs.build-and-push.result }}" == "success" ]; then
+          docker compose -f docker-compose.pi-native.yml pull
           docker image prune -af
         fi
+        
+        # Start containers (always recreate to pick up config changes)
+        docker compose -f docker-compose.pi-native.yml up -d --force-recreate
