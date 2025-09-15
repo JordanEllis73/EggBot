@@ -114,7 +114,7 @@ class SafetyLimits:
 class ControlConfig:
     """Complete control system configuration"""
     pid: PIDConfig
-    safety: SafetyLimits = SafetyLimits()
+    safety: SafetyLimits = field(default_factory=SafetyLimits)
     
     # Control loop timing
     main_loop_interval: float = 0.25   # Seconds between sensor readings
