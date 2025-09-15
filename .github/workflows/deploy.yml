@@ -131,8 +131,13 @@ jobs:
       
     - name: Deploy containers
       run: |
-        # Stop and remove old containers
-        docker compose -f docker-compose.pi-native.yml down
+        # Stop and remove ALL containers to avoid port conflicts
+        docker compose down --remove-orphans 2>/dev/null || true
+        docker compose -f docker-compose.pi-native.yml down --remove-orphans 2>/dev/null || true
+        
+        # Remove any containers using port 8000
+        docker ps -q --filter "publish=8000" | xargs -r docker stop 2>/dev/null || true
+        docker ps -aq --filter "publish=8000" | xargs -r docker rm 2>/dev/null || true
         
         # Start with new images (or existing ones if no rebuild)
         docker compose -f docker-compose.pi-native.yml up -d

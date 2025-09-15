@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   eggbot-pi-native:
     image: ghcr.io/jordanellis73/eggbot/api:latest
