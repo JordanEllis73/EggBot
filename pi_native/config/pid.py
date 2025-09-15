@@ -1,6 +1,6 @@
 """PID controller configuration for Pi-native EggBot"""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Tuple
 
 @dataclass
@@ -26,7 +26,7 @@ class PIDLimits:
 class PIDConfig:
     """Complete PID configuration"""
     gains: PIDGains
-    limits: PIDLimits = PIDLimits()
+    limits: PIDLimits = field(default_factory=PIDLimits)
     sample_time: float = 1.0     # Control loop period in seconds
     auto_mode: bool = True       # Start in automatic mode
     
