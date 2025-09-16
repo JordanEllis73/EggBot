@@ -9,17 +9,23 @@ services:
       - api_data:/app/data
       - /run/dbus:/run/dbus:rw
       - /var/run/dbus:/var/run/dbus:rw
-      - /sys/class/bluetooth:/sys/class/bluetooth:ro
+      - /sys/class/bluetooth:/sys/class/bluetooth:rw  # Bluetooth system access
+      - /sys/kernel/debug:/sys/kernel/debug:rw  # Bluetooth debugging
     devices:
       - "/dev/i2c-1:/dev/i2c-1"
       - "/dev/gpiomem:/dev/gpiomem"
     privileged: true  # Required for GPIO access
     network_mode: "host"
+    group_add:
+      - "i2c"  # Add container to i2c group
+      - "gpio"  # Add container to gpio group
+      - "bluetooth"  # Add container to bluetooth group
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
       - NET_RAW
       - NET_BIND_SERVICE
+      - SYS_PTRACE  # Required for Bluetooth debugging
     environment:
       - PI_NATIVE=true
       - SIMULATE=false
