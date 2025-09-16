@@ -59,8 +59,6 @@ services:
     restart: unless-stopped
     ports:
       - "3000:80"
-    environment:
-      - VITE_API_URL=http://eggbot-pi-native:8000
     depends_on:
       - eggbot-pi-native
     networks:
