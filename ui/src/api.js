@@ -1,5 +1,5 @@
-// Use environment variable for API base URL  
-const API = import.meta.env.VITE_API_URL || "/api";
+// Use nginx proxy for API requests
+const API = "/api";
 
 export async function getStatus() {
   const res = await fetch(`${API}/status`);

@@ -58,9 +58,7 @@ services:
     container_name: eggbot-ui
     restart: unless-stopped
     ports:
-      - "3000:3000"
-    environment:
-      - VITE_API_URL=http://localhost:8000
+      - "3000:80"
     depends_on:
       - eggbot-pi-native
     networks:
