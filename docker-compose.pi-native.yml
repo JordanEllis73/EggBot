@@ -27,6 +27,8 @@ services:
       - SIMULATE=false
       - PYTHONPATH=/app
       - LOG_LEVEL=INFO
+      - BLINKA_FT232H=1  # Enable CircuitPython hardware support
+      - BLINKA_MCP2221=1  # Enable additional hardware support
     depends_on:
       - pigpiod
     healthcheck:

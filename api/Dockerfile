@@ -44,6 +44,13 @@ RUN poetry install --no-root --no-interaction --no-ansi --verbose
 # Install bluepy3 separately with pip to ensure it compiles correctly
 RUN pip install --no-cache-dir bluepy3==0.4.1
 
+# Install pi-native hardware dependencies for I2C/GPIO
+RUN pip install --no-cache-dir \
+    adafruit-blinka \
+    adafruit-circuitpython-ads1x15 \
+    RPi.GPIO \
+    gpiozero
+
 # Copy source code
 COPY . .
 
@@ -64,6 +71,13 @@ RUN poetry install --no-root --no-interaction --no-ansi --only main --verbose
 
 # Install bluepy3 separately with pip to ensure it compiles correctly
 RUN pip install --no-cache-dir bluepy3==0.4.1
+
+# Install pi-native hardware dependencies for I2C/GPIO
+RUN pip install --no-cache-dir \
+    adafruit-blinka \
+    adafruit-circuitpython-ads1x15 \
+    RPi.GPIO \
+    gpiozero
 
 # Copy source code
 COPY . .
