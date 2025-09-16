@@ -6,6 +6,7 @@ services:
     volumes:
       - /dev/i2c-1:/dev/i2c-1  # I2C device access
       - /dev/gpiomem:/dev/gpiomem  # GPIO memory access
+      - /dev/bus/usb:/dev/bus/usb  # USB device access
       - api_data:/app/data
       - /run/dbus:/run/dbus:rw
       - /var/run/dbus:/var/run/dbus:rw
@@ -27,8 +28,8 @@ services:
       - SIMULATE=false
       - PYTHONPATH=/app
       - LOG_LEVEL=INFO
-      - BLINKA_FT232H=1  # Enable CircuitPython hardware support
-      - BLINKA_MCP2221=1  # Enable additional hardware support
+      - BLINKA_FORCEBOARD=RASPBERRY_PI_4B  # Force Pi platform detection
+      - BLINKA_FORCECHIP=BCM2711  # Force Pi chip detection
     depends_on:
       - pigpiod
     healthcheck:
