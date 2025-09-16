@@ -1,5 +1,5 @@
-// Use relative path since Vite proxy handles the routing
-const API = "/api";
+// Use environment variable for API base URL  
+const API = import.meta.env.VITE_API_URL || "/api";
 
 export async function getStatus() {
   const res = await fetch(`${API}/status`);
