@@ -16,10 +16,6 @@ services:
       - "/dev/gpiomem:/dev/gpiomem"
     privileged: true  # Required for GPIO access
     network_mode: "host"
-    group_add:
-      - "i2c"  # Add container to i2c group
-      - "gpio"  # Add container to gpio group
-      - "bluetooth"  # Add container to bluetooth group
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
