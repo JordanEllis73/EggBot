@@ -7,7 +7,7 @@ import logging
 
 from pi_native.hardware.ads1115_manager import ADS1115Manager, ProbeReading
 from pi_native.hardware.thermistor_calc import ThermistorCalculator
-from pi_native.config.hardware import hardware_config
+from pi_native.config.hardware import hardware_config, PROBE_CHANNEL_MAP
 from pi_native.config.pid import SafetyLimits
 
 @dataclass
@@ -78,7 +78,7 @@ class TemperatureMonitor:
     
     def _initialize_probes(self) -> None:
         """Initialize probe status objects"""
-        for channel, probe_name in hardware_config.PROBE_CHANNEL_MAP.items():
+        for channel, probe_name in PROBE_CHANNEL_MAP.items():
             self.probes[probe_name] = ProbeStatus(
                 probe_name=probe_name,
                 channel=channel
@@ -132,7 +132,7 @@ class TemperatureMonitor:
                 for channel, adc_reading in readings.items():
                     temp_reading = self._process_reading(channel, adc_reading)
                     if temp_reading:
-                        probe_name = hardware_config.PROBE_CHANNEL_MAP[channel]
+                        probe_name = PROBE_CHANNEL_MAP[channel]
                         temp_readings[probe_name] = temp_reading
                 
                 # Update probe status and check safety
@@ -154,7 +154,7 @@ class TemperatureMonitor:
     def _process_reading(self, channel: int, adc_reading: ProbeReading) -> Optional[TemperatureReading]:
         """Process ADC reading into temperature reading"""
         try:
-            probe_name = hardware_config.PROBE_CHANNEL_MAP[channel]
+            probe_name = PROBE_CHANNEL_MAP[channel]
             
             # Convert voltage to temperature
             temp_c = self.calculator.voltage_to_temperature(adc_reading.voltage, channel)
@@ -185,7 +185,7 @@ class TemperatureMonitor:
             )
             
         except Exception as e:
-            probe_name = hardware_config.PROBE_CHANNEL_MAP.get(channel, f"Channel_{channel}")
+            probe_name = PROBE_CHANNEL_MAP.get(channel, f"Channel_{channel}")
             logging.error(f"Error processing reading for {probe_name}: {e}")
             return None
     
