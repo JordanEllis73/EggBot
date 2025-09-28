@@ -554,7 +554,7 @@ export default function App() {
           />
         </div>
         
-        <StatusDisplay status={last} />
+        <StatusDisplay status={last} temperatureUnit={temperatureUnit} />
         
         <ControlModeToggle 
           controlMode={controlMode}

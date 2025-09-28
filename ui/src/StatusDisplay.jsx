@@ -1,10 +1,15 @@
-export default function StatusDisplay({ status }) {
+import { getDisplayTemperature, formatTemperature } from "./utils/temperature";
+
+export default function StatusDisplay({ status, temperatureUnit }) {
+  const pitTemp = getDisplayTemperature(status?.pit_temp_c, temperatureUnit);
+  const meatTemp = getDisplayTemperature(status?.meat_temp_c, temperatureUnit);
+
   return (
     <div style={{ background: "#1a1a1a", padding: 16, borderRadius: 8, marginBottom: 20 }}>
       <h3 style={{ margin: "0 0 12px 0" }}>Current Status</h3>
       <div style={{ fontSize: 14, lineHeight: 1.6 }}>
-        <div>Pit: <strong>{status?.pit_temp_c?.toFixed(1) ?? "—"}°C</strong></div>
-        <div>Meat: <strong>{status?.meat_temp_c?.toFixed(1) ?? "—"}°C</strong></div>
+        <div>Pit: <strong>{formatTemperature(pitTemp, temperatureUnit)}</strong></div>
+        <div>Meat: <strong>{formatTemperature(meatTemp, temperatureUnit)}</strong></div>
         <div>Damper: <strong>{status?.damper_percent ?? 0}%</strong></div>
       </div>
     </div>
