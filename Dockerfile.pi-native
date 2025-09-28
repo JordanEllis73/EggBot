@@ -12,7 +12,6 @@ RUN apt-get update && apt-get install -y \
     python3-libgpiod \
     i2c-tools \
     python3-smbus \
-    python3-smbus2 \
     libfreetype6-dev \
     libpng-dev \
     libjpeg-dev \
