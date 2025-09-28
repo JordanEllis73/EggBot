@@ -1,8 +1,10 @@
 import { getDisplayTemperature, formatTemperature } from "./utils/temperature";
 
 export default function StatusDisplay({ status, temperatureUnit }) {
+  console.log('StatusDisplay - temperatureUnit:', temperatureUnit, 'status:', status);
   const pitTemp = getDisplayTemperature(status?.pit_temp_c, temperatureUnit);
   const meatTemp = getDisplayTemperature(status?.meat_temp_c, temperatureUnit);
+  console.log('StatusDisplay - pitTemp:', pitTemp, 'meatTemp:', meatTemp);
 
   return (
     <div style={{ background: "#1a1a1a", padding: 16, borderRadius: 8, marginBottom: 20 }}>
