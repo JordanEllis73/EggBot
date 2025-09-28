@@ -1,7 +1,8 @@
 services:
   api:
-    image: ghcr.io/jordanellis73/eggbot/api:latest
-    pull_policy: missing
+    build:
+      context: .
+      dockerfile: Dockerfile.pi-native
     restart: unless-stopped
     volumes:
       - /dev/i2c-1:/dev/i2c-1  # I2C device access

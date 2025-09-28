@@ -56,7 +56,6 @@ RUN mkdir -p /app/logs /app/config && \
 
 # Set environment variables
 ENV PYTHONPATH=/app:/app/api
-ENV PI_NATIVE=true
 ENV LOG_LEVEL=INFO
 
 # Expose port
