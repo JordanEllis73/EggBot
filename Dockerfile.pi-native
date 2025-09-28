@@ -8,14 +8,18 @@ RUN apt-get update && apt-get install -y \
     cmake \
     pkg-config \
     libgpiod2 \
+    libgpiod-dev \
+    python3-libgpiod \
     i2c-tools \
     python3-smbus \
+    python3-smbus2 \
     libfreetype6-dev \
     libpng-dev \
     libjpeg-dev \
     libopenblas-dev \
     wget \
     unzip \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pigpio from source (required for Pi hardware access)
@@ -43,8 +47,9 @@ RUN ls -la /app/ && ls -la /app/api/ && echo "Build timestamp: $(date)"
 # Create non-root user for running the application
 RUN groupadd -r eggbot && useradd -r -g eggbot eggbot
 
-# Add user to gpio group (if it exists)
-RUN groupadd -f gpio && usermod -a -G gpio eggbot
+# Create I2C and GPIO groups and add user to them
+RUN groupadd -f i2c && groupadd -f gpio && \
+    usermod -a -G i2c,gpio eggbot
 
 # Create necessary directories
 RUN mkdir -p /app/logs /app/config && \

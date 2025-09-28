@@ -17,6 +17,9 @@ services:
       - "/dev/gpiomem:/dev/gpiomem"
     privileged: true  # Required for GPIO access
     network_mode: "host"
+    group_add:
+      - "i2c"
+      - "gpio"
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
@@ -30,6 +33,7 @@ services:
       - LOG_LEVEL=INFO
       - BLINKA_FORCEBOARD=RASPBERRY_PI_4B  # Force Pi platform detection
       - BLINKA_FORCECHIP=BCM2711  # Force Pi chip detection
+      - BLINKA_FORCEI2C=1  # Force I2C bus selection
     depends_on:
       - pigpiod
     healthcheck:
