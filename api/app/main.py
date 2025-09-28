@@ -1,4 +1,10 @@
 import os
+import logging
+
+# Configure logging BEFORE importing anything else
+from app.logging_config import configure_logging
+logger = configure_logging()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime

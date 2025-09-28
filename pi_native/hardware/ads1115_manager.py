@@ -28,14 +28,15 @@ def _try_import_blinka():
         ADS = _ADS
         AnalogIn = _AnalogIn
         BLINKA_AVAILABLE = True
-        logging.info("Adafruit Blinka libraries imported successfully")
+        # Use print as fallback during import time
+        print("INFO: Adafruit Blinka libraries imported successfully")
 
     except ImportError as e:
         BLINKA_AVAILABLE = False
-        logging.warning(f"Adafruit Blinka libraries not available: {e}")
+        print(f"WARNING: Adafruit Blinka libraries not available: {e}")
     except Exception as e:
         BLINKA_AVAILABLE = False
-        logging.warning(f"Adafruit Blinka initialization failed: {e}")
+        print(f"WARNING: Adafruit Blinka initialization failed: {e}")
 
 def _try_import_smbus():
     """Safely try to import SMBus2 library"""
@@ -44,10 +45,11 @@ def _try_import_smbus():
         import smbus2 as _smbus2
         smbus2 = _smbus2
         SMBUS_AVAILABLE = True
-        logging.info("SMBus2 library imported successfully")
+        # Use print as fallback during import time
+        print("INFO: SMBus2 library imported successfully")
     except ImportError as e:
         SMBUS_AVAILABLE = False
-        logging.warning(f"SMBus2 library not available: {e}")
+        print(f"WARNING: SMBus2 library not available: {e}")
 
 # Try imports on module load
 _try_import_blinka()
@@ -79,7 +81,15 @@ class ADS1115Manager:
         if not self.simulate:
             self._initialize_hardware()
 
-        logging.info(f"ADS1115Manager initialized (simulate={self.simulate}, smbus={self.use_smbus})")
+        if self.simulate:
+            logging.info(f"ADS1115Manager initialized in SIMULATION mode")
+        elif self.use_smbus:
+            logging.info(f"ADS1115Manager initialized using SMBus2 library")
+        else:
+            logging.info(f"ADS1115Manager initialized using Adafruit Blinka library")
+
+        # Also log library availability status
+        logging.info(f"Library availability - Blinka: {BLINKA_AVAILABLE}, SMBus2: {SMBUS_AVAILABLE}")
     
     def _initialize_hardware(self) -> None:
         """Initialize I2C connection and ADS1115"""
