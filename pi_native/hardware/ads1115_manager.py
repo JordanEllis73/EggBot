@@ -78,6 +78,20 @@ class ADS1115Manager:
         self._channels: Dict[int, AnalogIn] = {}
         self._last_readings: Dict[int, ProbeReading] = {}
 
+        # Import hardware config for proper ADC settings
+        try:
+            from pi_native.config.hardware import hardware_config
+            self.adc_config = hardware_config.adc
+        except ImportError:
+            # Fallback config if import fails
+            from dataclasses import dataclass
+            @dataclass
+            class FallbackADCConfig:
+                sample_rate: int = 860
+                gain: int = 1
+                supply_voltage: float = 3.3
+            self.adc_config = FallbackADCConfig()
+
         if not self.simulate:
             self._initialize_hardware()
 
@@ -144,6 +158,7 @@ class ADS1115Manager:
             # Test connection by reading config register
             config = self._smbus.read_word_data(self.i2c_address, 0x01)
             logging.info(f"ADS1115 initialized with SMBus on I2C address 0x{self.i2c_address:02x} (config: 0x{config:04x})")
+            logging.info(f"SMBus ADC config - Sample rate: {self.adc_config.sample_rate} SPS, Gain: {self.adc_config.gain}")
             self.use_smbus = True
 
         except Exception as e:
@@ -191,23 +206,67 @@ class ADS1115Manager:
             return None
 
     def _read_channel_smbus(self, channel: int) -> Optional[ProbeReading]:
-        """Read channel using SMBus2"""
+        """Read channel using SMBus2 with proper ADS1115 configuration"""
         try:
             # ADS1115 register addresses
             CONFIG_REG = 0x01
             CONVERSION_REG = 0x00
 
-            # Configure for single-shot conversion on specified channel
-            # Bits: OS[15]=1 (start), MUX[14:12]=channel+4 (single-ended), PGA[11:9]=001 (±4.096V)
-            # DR[7:5]=100 (128SPS), COMP_MODE[4]=0, COMP_POL[3]=0, COMP_LAT[2]=0, COMP_QUE[1:0]=11
-            config = 0x8000 | ((channel + 4) << 12) | 0x0200 | 0x0083
+            # Map sample rates to ADS1115 data rate bits (DR[7:5])
+            data_rate_map = {
+                8: 0x00,    # 000 = 8 SPS
+                16: 0x20,   # 001 = 16 SPS
+                32: 0x40,   # 010 = 32 SPS
+                64: 0x60,   # 011 = 64 SPS
+                128: 0x80,  # 100 = 128 SPS (default)
+                250: 0xA0,  # 101 = 250 SPS
+                475: 0xC0,  # 110 = 475 SPS
+                860: 0xE0   # 111 = 860 SPS
+            }
+
+            # Map gain to PGA bits (PGA[11:9])
+            gain_map = {
+                1: (0x0200, 4.096),  # ±4.096V
+                2: (0x0400, 2.048),  # ±2.048V
+                4: (0x0600, 1.024),  # ±1.024V
+                8: (0x0800, 0.512),  # ±0.512V
+                16: (0x0A00, 0.256)  # ±0.256V
+            }
+
+            # Get configuration from hardware config
+            data_rate_bits = data_rate_map.get(self.adc_config.sample_rate, 0xE0)  # Default to 860 SPS
+            gain_bits, voltage_range = gain_map.get(self.adc_config.gain, (0x0200, 4.096))  # Default to ±4.096V
+
+            # Calculate conversion time based on sample rate (add safety margin)
+            conversion_time = (1.0 / self.adc_config.sample_rate) + 0.001  # Add 1ms safety margin
+
+            # Build configuration word
+            # Bits: OS[15]=1 (start), MUX[14:12]=channel+4 (single-ended), PGA[11:9], MODE[8]=1 (single-shot)
+            # DR[7:5], COMP_MODE[4]=0, COMP_POL[3]=0, COMP_LAT[2]=0, COMP_QUE[1:0]=11 (disable comparator)
+            config = (
+                0x8000 |                    # OS: Start conversion
+                ((channel + 4) << 12) |     # MUX: Single-ended input (AIN0-3 = channel+4)
+                gain_bits |                 # PGA: Programmable gain
+                0x0100 |                    # MODE: Single-shot mode
+                data_rate_bits |            # DR: Data rate
+                0x0003                      # COMP_QUE: Disable comparator
+            )
 
             # Write configuration (big-endian)
             config_bytes = [(config >> 8) & 0xFF, config & 0xFF]
             self._smbus.write_i2c_block_data(self.i2c_address, CONFIG_REG, config_bytes)
 
-            # Wait for conversion (ADS1115 typical: 7.8ms at 128SPS)
-            time.sleep(0.01)
+            # Wait for conversion with proper timing
+            time.sleep(conversion_time)
+
+            # Poll for conversion completion (optional - check OS bit)
+            max_polls = 10
+            for _ in range(max_polls):
+                config_read = self._smbus.read_i2c_block_data(self.i2c_address, CONFIG_REG, 2)
+                config_word = (config_read[0] << 8) | config_read[1]
+                if config_word & 0x8000:  # OS bit set = conversion complete
+                    break
+                time.sleep(0.001)  # Small additional wait
 
             # Read conversion result (16-bit signed, big-endian)
             data = self._smbus.read_i2c_block_data(self.i2c_address, CONVERSION_REG, 2)
@@ -217,8 +276,11 @@ class ADS1115Manager:
             if raw_value > 32767:
                 raw_value -= 65536
 
-            # Convert to voltage (±4.096V range, 16-bit resolution)
-            voltage = (raw_value * 4.096) / 32767.0
+            # Convert to voltage using correct voltage range
+            voltage = (raw_value * voltage_range) / 32767.0
+
+            # Clamp voltage to valid range (prevent negative readings from noise)
+            voltage = max(0.0, min(voltage, voltage_range))
 
             reading = ProbeReading(
                 channel=channel,
