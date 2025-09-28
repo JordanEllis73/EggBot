@@ -12,22 +12,16 @@ from app.models.schemas import (
     ProbeCalibration, PerformanceStats, EnhancedTelemetryOut,
     TelemetryPoint
 )
-from app.dependencies import get_controller
-from app.pi_native_io import PiNativeControllerIO
+from app.dependencies import get_controller, ControllerIO
 
 router = APIRouter(prefix="/pi", tags=["pi-native"])
 
-def get_pi_controller(controller=Depends(get_controller)) -> PiNativeControllerIO:
-    """Dependency to ensure we have Pi-native controller"""
-    if not isinstance(controller, PiNativeControllerIO):
-        raise HTTPException(
-            status_code=503, 
-            detail="Pi-native features not available - system running in serial mode"
-        )
+def get_pi_controller(controller=Depends(get_controller)) -> ControllerIO:
+    """Dependency to get pi-native controller (always available now)"""
     return controller
 
 @router.get("/system/status", response_model=SystemStatus)
-async def get_system_status(controller: PiNativeControllerIO = Depends(get_pi_controller)):
+async def get_system_status(controller: ControllerIO = Depends(get_pi_controller)):
     """Get comprehensive system status including all probes"""
     try:
         system_status = controller.get_system_status()
@@ -49,7 +43,7 @@ async def get_system_status(controller: PiNativeControllerIO = Depends(get_pi_co
         raise HTTPException(status_code=500, detail=f"Failed to get system status: {str(e)}")
 
 @router.get("/probes/status")
-async def get_probe_status(controller: PiNativeControllerIO = Depends(get_pi_controller)):
+async def get_probe_status(controller: ControllerIO = Depends(get_pi_controller)):
     """Get status of all temperature probes"""
     try:
         return controller.get_probe_status()
@@ -57,7 +51,7 @@ async def get_probe_status(controller: PiNativeControllerIO = Depends(get_pi_con
         raise HTTPException(status_code=500, detail=f"Failed to get probe status: {str(e)}")
 
 @router.get("/temperatures")
-async def get_all_temperatures(controller: PiNativeControllerIO = Depends(get_pi_controller)):
+async def get_all_temperatures(controller: ControllerIO = Depends(get_pi_controller)):
     """Get current temperatures from all connected probes"""
     try:
         status = controller.get_enhanced_status()
@@ -73,7 +67,7 @@ async def get_all_temperatures(controller: PiNativeControllerIO = Depends(get_pi
         raise HTTPException(status_code=500, detail=f"Failed to get temperatures: {str(e)}")
 
 @router.get("/telemetry/enhanced", response_model=EnhancedTelemetryOut)
-async def get_enhanced_telemetry(controller: PiNativeControllerIO = Depends(get_pi_controller)):
+async def get_enhanced_telemetry(controller: ControllerIO = Depends(get_pi_controller)):
     """Get enhanced telemetry data with all temperature probes"""
     try:
         telemetry_data = controller.get_enhanced_telemetry()
@@ -88,7 +82,7 @@ async def get_enhanced_telemetry(controller: PiNativeControllerIO = Depends(get_
         raise HTTPException(status_code=500, detail=f"Failed to get enhanced telemetry: {str(e)}")
 
 @router.post("/telemetry/clear")
-async def clear_telemetry(controller: PiNativeControllerIO = Depends(get_pi_controller)):
+async def clear_telemetry(controller: ControllerIO = Depends(get_pi_controller)):
     """Clear all telemetry data"""
     try:
         controller.clear_telemetry()
@@ -97,7 +91,7 @@ async def clear_telemetry(controller: PiNativeControllerIO = Depends(get_pi_cont
         raise HTTPException(status_code=500, detail=f"Failed to clear telemetry: {str(e)}")
 
 @router.get("/pid/tuning-info", response_model=PIDTuningInfo)
-async def get_pid_tuning_info(controller: PiNativeControllerIO = Depends(get_pi_controller)):
+async def get_pid_tuning_info(controller: ControllerIO = Depends(get_pi_controller)):
     """Get PID tuning information for manual tuning"""
     try:
         tuning_info = controller.get_pid_tuning_info()
@@ -106,7 +100,7 @@ async def get_pid_tuning_info(controller: PiNativeControllerIO = Depends(get_pi_
         raise HTTPException(status_code=500, detail=f"Failed to get PID tuning info: {str(e)}")
 
 @router.get("/pid/presets")
-async def get_pid_presets(controller: PiNativeControllerIO = Depends(get_pi_controller)):
+async def get_pid_presets(controller: ControllerIO = Depends(get_pi_controller)):
     """Get list of available PID presets"""
     try:
         presets = controller.get_available_presets()
@@ -117,7 +111,7 @@ async def get_pid_presets(controller: PiNativeControllerIO = Depends(get_pi_cont
 @router.post("/pid/preset/load")
 async def load_pid_preset(
     data: PIDPresetLoad, 
-    controller: PiNativeControllerIO = Depends(get_pi_controller)
+    controller: ControllerIO = Depends(get_pi_controller)
 ):
     """Load a PID tuning preset"""
     try:
@@ -140,7 +134,7 @@ async def load_pid_preset(
 @router.post("/probes/calibrate")
 async def calibrate_probe(
     data: ProbeCalibration,
-    controller: PiNativeControllerIO = Depends(get_pi_controller)
+    controller: ControllerIO = Depends(get_pi_controller)
 ):
     """Calibrate a temperature probe using known actual temperature"""
     try:
@@ -156,7 +150,7 @@ async def calibrate_probe(
         raise HTTPException(status_code=500, detail=f"Failed to calibrate probe: {str(e)}")
 
 @router.get("/system/performance", response_model=PerformanceStats)
-async def get_performance_stats(controller: PiNativeControllerIO = Depends(get_pi_controller)):
+async def get_performance_stats(controller: ControllerIO = Depends(get_pi_controller)):
     """Get system performance statistics"""
     try:
         stats = controller.get_performance_stats()
@@ -165,7 +159,7 @@ async def get_performance_stats(controller: PiNativeControllerIO = Depends(get_p
         raise HTTPException(status_code=500, detail=f"Failed to get performance stats: {str(e)}")
 
 @router.post("/safety/reset")
-async def reset_safety_shutdown(controller: PiNativeControllerIO = Depends(get_pi_controller)):
+async def reset_safety_shutdown(controller: ControllerIO = Depends(get_pi_controller)):
     """Reset safety shutdown after resolving issues"""
     try:
         controller.reset_safety_shutdown()
@@ -174,7 +168,7 @@ async def reset_safety_shutdown(controller: PiNativeControllerIO = Depends(get_p
         raise HTTPException(status_code=500, detail=f"Failed to reset safety shutdown: {str(e)}")
 
 @router.get("/safety/status")
-async def get_safety_status(controller: PiNativeControllerIO = Depends(get_pi_controller)):
+async def get_safety_status(controller: ControllerIO = Depends(get_pi_controller)):
     """Get safety system status"""
     try:
         status = controller.get_enhanced_status()
@@ -191,11 +185,11 @@ async def get_safety_status(controller: PiNativeControllerIO = Depends(get_pi_co
         raise HTTPException(status_code=500, detail=f"Failed to get safety status: {str(e)}")
 
 @router.get("/debug/controller-info")
-async def get_controller_debug_info(controller: PiNativeControllerIO = Depends(get_pi_controller)):
+async def get_controller_debug_info(controller: ControllerIO = Depends(get_pi_controller)):
     """Get debug information about the controller (development use)"""
     try:
         return {
-            "controller_type": "PiNativeControllerIO",
+            "controller_type": "ControllerIO",
             "controller_running": controller.controller.is_running(),
             "performance_stats": controller.get_performance_stats(),
             "probe_status": controller.get_probe_status(),
@@ -206,11 +200,11 @@ async def get_controller_debug_info(controller: PiNativeControllerIO = Depends(g
 
 # Backwards compatibility endpoints
 @router.get("/status")
-async def get_status_legacy(controller: PiNativeControllerIO = Depends(get_pi_controller)):
+async def get_status_legacy(controller: ControllerIO = Depends(get_pi_controller)):
     """Legacy status endpoint with enhanced data"""
     return controller.get_status()
 
 @router.get("/telemetry")  
-async def get_telemetry_legacy(controller: PiNativeControllerIO = Depends(get_pi_controller)):
+async def get_telemetry_legacy(controller: ControllerIO = Depends(get_pi_controller)):
     """Legacy telemetry endpoint"""
     return {"points": controller.get_telemetry()}

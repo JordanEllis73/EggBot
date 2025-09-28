@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
 from app.models.schemas import TelemetryOut
-from app.dependencies import get_controller
-from app.serial_io import ControllerIO
+from app.dependencies import get_controller, ControllerIO
 
 router = APIRouter(prefix="", tags=["telemetry"])
 

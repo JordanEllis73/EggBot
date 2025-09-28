@@ -18,10 +18,6 @@ app.include_router(pi_native.router)
 
 print("Pi-native controller enabled")
 
-# # CORS for dev UI
-# origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
-# if origins:
-#     print(f"Origins: {origins}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
