@@ -19,7 +19,7 @@ class PiNativeControllerIO:
         self._lock = threading.Lock()
         
         # Initialize Pi-native controller
-        simulate = getattr(settings, 'simulate', False)
+        simulate = settings.simulate
         self.controller = EggBotController(
             control_config=default_control_config,
             simulate=simulate

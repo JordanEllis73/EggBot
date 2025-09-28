@@ -1,4 +1,5 @@
-# docker-compose.yml (updated for registry images)
+# docker-compose.yml - Legacy configuration (use docker-compose.pi-native.yml instead)
+# This file is kept for compatibility but pi-native is now the default
 services:
   api:
     image: ghcr.io/jordanellis73/eggbot/api:latest
@@ -6,14 +7,17 @@ services:
     restart: unless-stopped
     volumes:
       - api_data:/app/data
+      - /dev/i2c-1:/dev/i2c-1  # I2C device access
+      - /dev/gpiomem:/dev/gpiomem  # GPIO memory access
       - /run/dbus:/run/dbus:rw
       - /var/run/dbus:/var/run/dbus:rw
-      - /sys/class/bluetooth:/sys/class/bluetooth:ro
+      - /sys/class/bluetooth:/sys/class/bluetooth:rw
     devices:
-      - "/dev/ttyACM0:/dev/ttyACM0"
+      - "/dev/i2c-1:/dev/i2c-1"
+      - "/dev/gpiomem:/dev/gpiomem"
     group_add:
-      - "dialout"
-    # Add bluetooth capabilities and access
+      - "994"  # i2c group GID from host
+      - "993"  # gpio group GID from host
     privileged: true
     network_mode: "host"
     cap_add:
@@ -21,9 +25,9 @@ services:
       - SYS_ADMIN
       - NET_RAW
       - NET_BIND_SERVICE
+      - SYS_PTRACE
     environment:
-      - SERIAL_PORT=/dev/ttyACM0
-      - BAUD=115200
+      - SIMULATE=false
       - ENV=production
     deploy:
       resources:

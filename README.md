@@ -1,7 +1,7 @@
-# Big Green Egg Controller
+# EggBot - Pi-Native BBQ Controller
 
-Containerized project to control a servo-driven damper and read thermocouples via a microcontroller,
-with a local web UI for charts and control.
+Raspberry Pi-based controller for Big Green Egg style BBQ grills with direct hardware control.
+Features automated temperature control, multi-probe monitoring, and web-based interface.
 
 ## Prereqs
 - Docker and Docker Compose

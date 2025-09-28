@@ -3,11 +3,8 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 pydantic==2.5.0
 
-# Additional dependencies you might need
-pyserial==3.5
+# Additional dependencies
 python-multipart==0.0.6
 
-# Bluetooth dependencies - try multiple options for compatibility
+# Bluetooth dependencies for Pi-native operation
 bluepy3==0.4.1
-
-# Add any other dependencies your project uses

@@ -1,8 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from app.models.schemas import Status, SetpointIn, MeatSetpointIn, DamperIn, PIDGainsIn, ControlModeIn
-from app.dependencies import get_controller
-from app.serial_io import ControllerIO
+from app.dependencies import get_controller, ControllerIO
 
 router = APIRouter(prefix="", tags=["controller"])
 

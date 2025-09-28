@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "eggbot-api"
-version = "0.1.0"
-description = "Backend API for the Big Green Egg controller"
+version = "2.0.0"
+description = "Pi-Native Backend API for the Big Green Egg controller"
 authors = ["Jordan Ellis <jordanmellis16@gmail.com>"]
 
 [tool.poetry.dependencies]
@@ -9,7 +9,6 @@ python = "^3.10"
 fastapi = "^0.100.0"
 uvicorn = { extras= ["standard"], version = "^0.30.0"}
 pydantic = "^2.7.0"
-pyserial = "^3.5"
 python-dotenv = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
