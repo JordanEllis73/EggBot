@@ -4,22 +4,54 @@ from typing import Optional, List, Dict
 from dataclasses import dataclass
 import logging
 
-try:
-    import board
-    import busio
-    import adafruit_ads1x15.ads1115 as ADS
-    from adafruit_ads1x15.analog_in import AnalogIn
-    BLINKA_AVAILABLE = True
-except ImportError:
-    BLINKA_AVAILABLE = False
-    logging.warning("Adafruit Blinka libraries not available")
+# Global variables for library availability
+BLINKA_AVAILABLE = False
+SMBUS_AVAILABLE = False
+board = None
+busio = None
+ADS = None
+AnalogIn = None
+smbus2 = None
 
-try:
-    import smbus2
-    SMBUS_AVAILABLE = True
-except ImportError:
-    SMBUS_AVAILABLE = False
-    logging.warning("SMBus2 library not available")
+def _try_import_blinka():
+    """Safely try to import Blinka libraries"""
+    global BLINKA_AVAILABLE, board, busio, ADS, AnalogIn
+    try:
+        import board as _board
+        import busio as _busio
+        import adafruit_ads1x15.ads1115 as _ADS
+        from adafruit_ads1x15.analog_in import AnalogIn as _AnalogIn
+
+        # Only assign if all imports succeed
+        board = _board
+        busio = _busio
+        ADS = _ADS
+        AnalogIn = _AnalogIn
+        BLINKA_AVAILABLE = True
+        logging.info("Adafruit Blinka libraries imported successfully")
+
+    except ImportError as e:
+        BLINKA_AVAILABLE = False
+        logging.warning(f"Adafruit Blinka libraries not available: {e}")
+    except Exception as e:
+        BLINKA_AVAILABLE = False
+        logging.warning(f"Adafruit Blinka initialization failed: {e}")
+
+def _try_import_smbus():
+    """Safely try to import SMBus2 library"""
+    global SMBUS_AVAILABLE, smbus2
+    try:
+        import smbus2 as _smbus2
+        smbus2 = _smbus2
+        SMBUS_AVAILABLE = True
+        logging.info("SMBus2 library imported successfully")
+    except ImportError as e:
+        SMBUS_AVAILABLE = False
+        logging.warning(f"SMBus2 library not available: {e}")
+
+# Try imports on module load
+_try_import_blinka()
+_try_import_smbus()
 
 HARDWARE_AVAILABLE = BLINKA_AVAILABLE or SMBUS_AVAILABLE
 
@@ -58,6 +90,16 @@ class ADS1115Manager:
 
     def _initialize_blinka(self) -> None:
         """Initialize using Adafruit Blinka libraries"""
+        if not BLINKA_AVAILABLE:
+            logging.error("Blinka libraries not available")
+            if SMBUS_AVAILABLE:
+                logging.info("Falling back to SMBus implementation")
+                self._initialize_smbus()
+            else:
+                logging.warning("No I2C libraries available, falling back to simulation mode")
+                self.simulate = True
+            return
+
         try:
             i2c = busio.I2C(board.SCL, board.SDA)
             self._adc = ADS.ADS1115(i2c, address=self.i2c_address)
@@ -115,6 +157,10 @@ class ADS1115Manager:
 
     def _read_channel_blinka(self, channel: int) -> Optional[ProbeReading]:
         """Read channel using Adafruit Blinka"""
+        if not BLINKA_AVAILABLE or not self._channels:
+            logging.error("Blinka not available or channels not initialized")
+            return None
+
         try:
             analog_in = self._channels[channel]
             voltage = analog_in.voltage
