@@ -18,8 +18,8 @@ services:
     privileged: true  # Required for GPIO access
     network_mode: "host"
     group_add:
-      - "i2c"
-      - "gpio"
+      - "994"  # i2c group GID from host
+      - "993"  # gpio group GID from host
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN

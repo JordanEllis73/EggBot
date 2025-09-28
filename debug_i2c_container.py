@@ -97,29 +97,35 @@ def check_python_libraries():
     """Check Python I2C library availability"""
     print_separator("PYTHON LIBRARIES")
 
-    # Test Blinka libraries
+    # Test our safe imports from ADS1115Manager
     try:
-        import board
-        import busio
-        import adafruit_ads1x15.ads1115 as ADS
-        print("✓ Adafruit Blinka libraries available")
+        sys.path.insert(0, '/app/pi_native')
+        from pi_native.hardware.ads1115_manager import BLINKA_AVAILABLE, SMBUS_AVAILABLE, HARDWARE_AVAILABLE
 
-        try:
-            print(f"  Board ID: {getattr(board, 'board_id', 'Unknown')}")
-        except Exception as e:
-            print(f"  ⚠ Cannot get board ID: {e}")
+        if BLINKA_AVAILABLE:
+            print("✓ Adafruit Blinka libraries available")
+            try:
+                from pi_native.hardware.ads1115_manager import board
+                if board:
+                    print(f"  Board ID: {getattr(board, 'board_id', 'Unknown')}")
+            except Exception as e:
+                print(f"  ⚠ Cannot get board ID: {e}")
+        else:
+            print("✗ Blinka libraries not available")
+
+        if SMBUS_AVAILABLE:
+            print("✓ SMBus2 library available")
+        else:
+            print("✗ SMBus2 library not available")
+
+        print(f"Overall hardware support: {'✓' if HARDWARE_AVAILABLE else '✗'}")
 
     except ImportError as e:
-        print(f"✗ Blinka libraries not available: {e}")
+        print(f"✗ Cannot import ADS1115Manager: {e}")
+    except Exception as e:
+        print(f"✗ Library check error: {e}")
 
-    # Test SMBus2
-    try:
-        import smbus2
-        print("✓ SMBus2 library available")
-    except ImportError as e:
-        print(f"✗ SMBus2 library not available: {e}")
-
-    # Test platform detection
+    # Test platform detection safely
     try:
         import adafruit_platformdetect.detector as detector
         print(f"✓ Platform detection: {detector.board.id}")
@@ -153,21 +159,21 @@ def test_i2c_access():
     except Exception as e:
         print(f"✗ SMBus2 test error: {e}")
 
-    # Test with Blinka
+    # Test with Blinka using safe imports
     try:
-        import board
-        import busio
-        import adafruit_ads1x15.ads1115 as ADS
-        print("\nTesting Blinka I2C communication...")
+        sys.path.insert(0, '/app/pi_native')
+        from pi_native.hardware.ads1115_manager import BLINKA_AVAILABLE, board, busio, ADS
 
-        i2c = busio.I2C(board.SCL, board.SDA)
-        adc = ADS.ADS1115(i2c, address=0x48)
-        print("✓ Blinka: Successfully initialized ADS1115")
+        if BLINKA_AVAILABLE and board and busio and ADS:
+            print("\nTesting Blinka I2C communication...")
+            i2c = busio.I2C(board.SCL, board.SDA)
+            adc = ADS.ADS1115(i2c, address=0x48)
+            print("✓ Blinka: Successfully initialized ADS1115")
+        else:
+            print("\n✗ Blinka libraries not available for testing")
 
-    except ImportError:
-        print("✗ Blinka libraries not available for testing")
     except Exception as e:
-        print(f"✗ Blinka: Failed to initialize ADS1115: {e}")
+        print(f"\n✗ Blinka: Failed to initialize ADS1115: {e}")
 
 def test_ads1115_manager():
     """Test the actual ADS1115Manager class"""
