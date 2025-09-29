@@ -97,7 +97,7 @@ PID_PRESETS = {
 class SafetyLimits:
     """Safety limits for temperature control"""
     max_pit_temp: float = 400.0     # Maximum pit temperature (°C)
-    min_pit_temp: float = 50.0      # Minimum pit temperature (°C)  
+    min_pit_temp: float = 0.0      # Minimum pit temperature (°C)  
     max_meat_temp: float = 100.0    # Maximum meat temperature (°C)
     min_meat_temp: float = 0.0      # Minimum meat temperature (°C)
     
