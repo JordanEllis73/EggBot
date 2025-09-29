@@ -8,9 +8,9 @@ from datetime import datetime
 from typing import Dict, Any
 
 from app.models.schemas import (
-    SystemStatus, ProbeStatus, PIDTuningInfo, PIDPresetLoad, 
+    SystemStatus, ProbeStatus, PIDTuningInfo, PIDPresetLoad,
     ProbeCalibration, PerformanceStats, EnhancedTelemetryOut,
-    TelemetryPoint
+    TelemetryPoint, CSVLoggingStartIn, CSVLoggingStatusOut, CSVLoggingStopOut
 )
 from app.dependencies import get_controller, ControllerIO
 
@@ -204,7 +204,62 @@ async def get_status_legacy(controller: ControllerIO = Depends(get_pi_controller
     """Legacy status endpoint with enhanced data"""
     return controller.get_status()
 
-@router.get("/telemetry")  
+@router.get("/telemetry")
 async def get_telemetry_legacy(controller: ControllerIO = Depends(get_pi_controller)):
     """Legacy telemetry endpoint"""
     return {"points": controller.get_telemetry()}
+
+
+# CSV Logging endpoints
+@router.post("/csv-logging/start")
+async def start_csv_logging(
+    data: CSVLoggingStartIn,
+    controller: ControllerIO = Depends(get_pi_controller)
+):
+    """Start CSV logging with specified filename and interval"""
+    try:
+        controller.start_csv_logging(data.filename, data.interval_seconds)
+        status = controller.get_csv_logging_status()
+        return {
+            "ok": True,
+            "message": f"CSV logging started: {data.filename}",
+            "status": status
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start CSV logging: {str(e)}")
+
+
+@router.post("/csv-logging/stop")
+async def stop_csv_logging(controller: ControllerIO = Depends(get_pi_controller)):
+    """Stop CSV logging and return file information"""
+    try:
+        file_path = controller.stop_csv_logging()
+
+        # Calculate duration from status before stopping
+        import os
+        from datetime import datetime
+
+        # Get file info
+        file_stats = os.stat(file_path) if os.path.exists(file_path) else None
+
+        return {
+            "ok": True,
+            "message": "CSV logging stopped",
+            "file_path": file_path,
+            "file_size_bytes": file_stats.st_size if file_stats else 0
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to stop CSV logging: {str(e)}")
+
+
+@router.get("/csv-logging/status", response_model=CSVLoggingStatusOut)
+async def get_csv_logging_status(controller: ControllerIO = Depends(get_pi_controller)):
+    """Get current CSV logging status"""
+    try:
+        return controller.get_csv_logging_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get CSV logging status: {str(e)}")

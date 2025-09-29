@@ -158,3 +158,22 @@ class TelemetryPoint(BaseModel):
 
 class EnhancedTelemetryOut(BaseModel):
     points: List[TelemetryPoint]
+
+
+# CSV Logging schemas
+class CSVLoggingStartIn(BaseModel):
+    filename: str = Field(min_length=1, max_length=255, pattern=r'^[a-zA-Z0-9_\-\.]+$')
+    interval_seconds: float = Field(ge=1.0, le=300.0, default=5.0)
+
+
+class CSVLoggingStatusOut(BaseModel):
+    enabled: bool
+    file_path: Optional[str] = None
+    interval_seconds: float = 0.0
+    duration_seconds: float = 0.0
+    start_time: Optional[str] = None
+
+
+class CSVLoggingStopOut(BaseModel):
+    file_path: str
+    duration_seconds: float

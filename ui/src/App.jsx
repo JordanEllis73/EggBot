@@ -29,6 +29,7 @@ import PIDControls from "./PIDControls";
 import MeaterControls from "./MeaterControls";
 import TemperatureToggle from "./TemperatureToggle";
 import ControlModeToggle from "./ControlModeToggle";
+import CSVLoggingControls from "./CSVLoggingControls";
 
 
 export default function App() {
@@ -619,6 +620,8 @@ export default function App() {
         />
         
         <MeaterControls temperatureUnit={temperatureUnit} />
+
+        <CSVLoggingControls />
       </div>
       
       {/* Main Chart Area */}

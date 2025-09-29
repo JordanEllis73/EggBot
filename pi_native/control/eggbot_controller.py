@@ -4,6 +4,9 @@ from typing import Dict, Optional, List, Any
 from dataclasses import dataclass, asdict
 from datetime import datetime
 import logging
+import csv
+import os
+from pathlib import Path
 
 from pi_native.control.pid_controller import PIDController, PIDState
 from pi_native.control.temperature_monitor import TemperatureMonitor, TemperatureReading
@@ -87,7 +90,16 @@ class EggBotController:
         # Performance tracking
         self.control_loop_count = 0
         self.last_control_time = 0.0
-        
+
+        # CSV logging
+        self.csv_logging_enabled = False
+        self.csv_file_path: Optional[str] = None
+        self.csv_writer: Optional[csv.DictWriter] = None
+        self.csv_file_handle: Optional[object] = None
+        self.csv_start_time: Optional[float] = None
+        self.csv_logging_interval = 5.0  # Default 5 seconds
+        self.csv_last_log_time = 0.0
+
         # Setup temperature monitor alerts
         self.temperature_monitor.add_alert_callback(self._handle_temperature_alert)
         
@@ -142,12 +154,19 @@ class EggBotController:
         
         # Stop temperature monitoring
         self.temperature_monitor.stop_monitoring()
-        
+
+        # Stop CSV logging if active
+        if self.csv_logging_enabled:
+            try:
+                self.stop_csv_logging()
+            except Exception as e:
+                logging.error(f"Error stopping CSV logging: {e}")
+
         # Close damper and stop servo
         self.servo_controller.set_position_percent(0)
         time.sleep(0.5)
         self.servo_controller.close()
-        
+
         logging.info("EggBotController stopped")
     
     def _control_loop(self) -> None:
@@ -172,7 +191,13 @@ class EggBotController:
                 if (current_time - last_telemetry_time) >= self.control_config.telemetry_interval:
                     self._log_telemetry()
                     last_telemetry_time = current_time
-                
+
+                # Log CSV data at specified interval
+                if (self.csv_logging_enabled and
+                    (current_time - self.csv_last_log_time) >= self.csv_logging_interval):
+                    self._log_csv_data()
+                    self.csv_last_log_time = current_time
+
                 # Sleep until next cycle
                 time.sleep(self.control_config.main_loop_interval)
                 
@@ -440,7 +465,138 @@ class EggBotController:
     def is_running(self) -> bool:
         """Check if controller is running"""
         return self._running
-    
+
+    def start_csv_logging(self, filename: str, interval_seconds: float = 5.0) -> None:
+        """Start logging telemetry data to CSV file"""
+        if self.csv_logging_enabled:
+            raise ValueError("CSV logging is already active")
+
+        # Ensure logs directory exists
+        logs_dir = Path("logs")
+        logs_dir.mkdir(exist_ok=True)
+
+        # Sanitize filename
+        if not filename.endswith('.csv'):
+            filename += '.csv'
+
+        # Create full path
+        csv_path = logs_dir / filename
+
+        try:
+            # Open CSV file for writing
+            self.csv_file_handle = open(csv_path, 'w', newline='', encoding='utf-8')
+
+            # Define CSV headers
+            fieldnames = [
+                'time_since_start_seconds',
+                'timestamp',
+                'pit_temp_c',
+                'meat_temp_1_c',
+                'meat_temp_2_c',
+                'ambient_temp_c',
+                'setpoint_c',
+                'meat_setpoint_c',
+                'damper_percent',
+                'pid_output',
+                'pid_error',
+                'control_mode',
+                'safety_shutdown'
+            ]
+
+            # Create CSV writer
+            self.csv_writer = csv.DictWriter(self.csv_file_handle, fieldnames=fieldnames)
+            self.csv_writer.writeheader()
+
+            # Set logging parameters
+            with self._lock:
+                self.csv_logging_enabled = True
+                self.csv_file_path = str(csv_path)
+                self.csv_logging_interval = interval_seconds
+                self.csv_start_time = time.time()
+                self.csv_last_log_time = 0.0
+
+            logging.info(f"CSV logging started: {csv_path} (interval: {interval_seconds}s)")
+
+        except Exception as e:
+            # Clean up on error
+            if self.csv_file_handle:
+                self.csv_file_handle.close()
+                self.csv_file_handle = None
+            self.csv_writer = None
+            raise ValueError(f"Failed to start CSV logging: {e}")
+
+    def stop_csv_logging(self) -> str:
+        """Stop CSV logging and return the file path"""
+        if not self.csv_logging_enabled:
+            raise ValueError("CSV logging is not active")
+
+        file_path = self.csv_file_path
+
+        with self._lock:
+            self.csv_logging_enabled = False
+
+        # Close file
+        if self.csv_file_handle:
+            self.csv_file_handle.close()
+            self.csv_file_handle = None
+
+        self.csv_writer = None
+        self.csv_file_path = None
+        self.csv_start_time = None
+
+        logging.info(f"CSV logging stopped: {file_path}")
+        return file_path
+
+    def get_csv_logging_status(self) -> Dict[str, Any]:
+        """Get current CSV logging status"""
+        with self._lock:
+            if self.csv_logging_enabled and self.csv_start_time:
+                duration = time.time() - self.csv_start_time
+            else:
+                duration = 0.0
+
+            return {
+                "enabled": self.csv_logging_enabled,
+                "file_path": self.csv_file_path,
+                "interval_seconds": self.csv_logging_interval,
+                "duration_seconds": duration,
+                "start_time": datetime.fromtimestamp(self.csv_start_time).isoformat() + "Z" if self.csv_start_time else None
+            }
+
+    def _log_csv_data(self) -> None:
+        """Log current data to CSV if logging is enabled"""
+        if not self.csv_logging_enabled or not self.csv_writer or not self.csv_start_time:
+            return
+
+        current_time = time.time()
+        time_since_start = current_time - self.csv_start_time
+
+        try:
+            # Prepare CSV row data
+            csv_row = {
+                'time_since_start_seconds': round(time_since_start, 1),
+                'timestamp': datetime.now().isoformat() + "Z",
+                'pit_temp_c': self.state.pit_temp_c,
+                'meat_temp_1_c': self.state.meat_temp_1_c,
+                'meat_temp_2_c': self.state.meat_temp_2_c,
+                'ambient_temp_c': self.state.ambient_temp_c,
+                'setpoint_c': self.state.setpoint_c,
+                'meat_setpoint_c': self.state.meat_setpoint_c,
+                'damper_percent': self.state.damper_percent,
+                'pid_output': self.state.pid_output,
+                'pid_error': self.state.pid_error,
+                'control_mode': self.state.control_mode,
+                'safety_shutdown': self.state.safety_shutdown
+            }
+
+            # Write row to CSV
+            self.csv_writer.writerow(csv_row)
+            self.csv_file_handle.flush()  # Ensure data is written immediately
+
+        except Exception as e:
+            logging.error(f"Error writing to CSV: {e}")
+            # Don't stop logging on individual write errors
+
     def __enter__(self):
         """Context manager entry"""
         self.start()

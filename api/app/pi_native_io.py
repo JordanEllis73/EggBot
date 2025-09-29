@@ -184,6 +184,18 @@ class PiNativeControllerIO:
         """Clear telemetry data"""
         self.controller.clear_telemetry()
     
+    def start_csv_logging(self, filename: str, interval_seconds: float = 5.0) -> None:
+        """Start CSV logging"""
+        self.controller.start_csv_logging(filename, interval_seconds)
+
+    def stop_csv_logging(self) -> str:
+        """Stop CSV logging and return file path"""
+        return self.controller.stop_csv_logging()
+
+    def get_csv_logging_status(self) -> dict:
+        """Get CSV logging status"""
+        return self.controller.get_csv_logging_status()
+
     def close(self) -> None:
         """Clean shutdown of the controller"""
         if hasattr(self, 'controller'):
