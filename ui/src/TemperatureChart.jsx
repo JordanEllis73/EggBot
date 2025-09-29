@@ -24,9 +24,11 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
   
   // Extract and convert temperature data based on unit preference
   const convertTemp = (temp) => getDisplayTemperature(temp, temperatureUnit);
-  
+
   const pitTemps = points.map(p => convertTemp(p.pit_temp_c)).filter(t => t != null);
-  const meatTemps = points.map(p => convertTemp(p.meat_temp_c)).filter(t => t != null);
+  // Support multiple meat probes with legacy compatibility
+  const meat1Temps = points.map(p => convertTemp(p.meat_temp_1_c || p.meat_temp_c)).filter(t => t != null);
+  const meat2Temps = points.map(p => convertTemp(p.meat_temp_2_c)).filter(t => t != null);
   const setpointTemps = points.map(p => convertTemp(p.setpoint_c)).filter(t => t != null);
   const meatSetpointTemps = points.map(p => convertTemp(p.meat_setpoint_c)).filter(t => t != null);
   
@@ -86,7 +88,7 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
     });
   }
   
-  const allTemps = [...pitTemps, ...meatTemps, ...setpointTemps, ...meatSetpointTemps, ...meaterProbeTemps, ...meaterAmbientTemps];
+  const allTemps = [...pitTemps, ...meat1Temps, ...meat2Temps, ...setpointTemps, ...meatSetpointTemps, ...meaterProbeTemps, ...meaterAmbientTemps];
   
   if (allTemps.length === 0) return <div>No temperature data</div>;
   
@@ -136,7 +138,8 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
   };
   
   const pitPath = createPath(points.map(p => convertTemp(p.pit_temp_c)));
-  const meatPath = createPath(points.map(p => convertTemp(p.meat_temp_c)));
+  const meat1Path = createPath(points.map(p => convertTemp(p.meat_temp_1_c || p.meat_temp_c)));
+  const meat2Path = createPath(points.map(p => convertTemp(p.meat_temp_2_c)));
   const pitSetPath = createPath(points.map(p => convertTemp(p.setpoint_c)));
   const meatSetPath = createPath(points.map(p => convertTemp(p.meat_setpoint_c)));
   const meaterProbePath = meaterProbeTemps.length > 0 ? createPath(meaterProbeTemps) : null;
@@ -246,12 +249,22 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
           />
         )}
         
-        {meatPath && (
-          <path 
-            d={meatPath} 
-            stroke="#4ecdc4" 
-            fill="none" 
+        {meat1Path && (
+          <path
+            d={meat1Path}
+            stroke="#4ecdc4"
+            fill="none"
             strokeWidth="3"
+          />
+        )}
+
+        {meat2Path && (
+          <path
+            d={meat2Path}
+            stroke="#4ecdc4"
+            fill="none"
+            strokeWidth="3"
+            strokeDasharray="3,3"
           />
         )}
         
@@ -337,11 +350,22 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
           />
         )}
         
-        {points.length > 0 && points[points.length - 1].meat_temp_c != null && (
-          <circle 
-            cx={getX(points.length - 1)} 
-            cy={getY(convertTemp(points[points.length - 1].meat_temp_c))} 
-            r="4" 
+        {points.length > 0 && (points[points.length - 1].meat_temp_1_c != null || points[points.length - 1].meat_temp_c != null) && (
+          <circle
+            cx={getX(points.length - 1)}
+            cy={getY(convertTemp(points[points.length - 1].meat_temp_1_c || points[points.length - 1].meat_temp_c))}
+            r="4"
+            fill="#4ecdc4"
+            stroke="#111"
+            strokeWidth="2"
+          />
+        )}
+
+        {points.length > 0 && points[points.length - 1].meat_temp_2_c != null && (
+          <circle
+            cx={getX(points.length - 1)}
+            cy={getY(convertTemp(points[points.length - 1].meat_temp_2_c))}
+            r="4"
             fill="#4ecdc4"
             stroke="#111"
             strokeWidth="2"
@@ -397,23 +421,37 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
             }}></div>
             <span>Pit Target: {status?.setpoint_c ? formatTemperature(convertTemp(status.setpoint_c), temperatureUnit) : '—'}</span>
           </div>
-          {(points.some(p => p.meat_temp_c != null) || status?.meat_setpoint_c) && (
+          {/* Meat probe 1 (legacy compatibility) */}
+          {(points.some(p => p.meat_temp_1_c != null || p.meat_temp_c != null) || status?.meat_setpoint_c) && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 20, height: 3, background: '#4ecdc4' }}></div>
-                <span>Meat Temp: {points.length > 0 && points[points.length - 1].meat_temp_c != null 
-                  ? formatTemperature(convertTemp(points[points.length - 1].meat_temp_c), temperatureUnit) : '—'}</span>
+                <span>Meat 1: {points.length > 0 && (points[points.length - 1].meat_temp_1_c != null || points[points.length - 1].meat_temp_c != null)
+                  ? formatTemperature(convertTemp(points[points.length - 1].meat_temp_1_c || points[points.length - 1].meat_temp_c), temperatureUnit) : '—'}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ 
-                  width: 20, 
-                  height: 3, 
+                <div style={{
+                  width: 20,
+                  height: 3,
                   background: '#4ecdc4',
                   backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 4px, #111 4px, #111 6px)'
                 }}></div>
                 <span>Meat Target: {status?.meat_setpoint_c ? formatTemperature(convertTemp(status.meat_setpoint_c), temperatureUnit) : '—'}</span>
               </div>
             </>
+          )}
+          {/* Meat probe 2 */}
+          {points.some(p => p.meat_temp_2_c != null) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 20,
+                height: 3,
+                background: '#4ecdc4',
+                backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 1.5px, #111 1.5px, #111 3px)'
+              }}></div>
+              <span>Meat 2: {points.length > 0 && points[points.length - 1].meat_temp_2_c != null
+                ? formatTemperature(convertTemp(points[points.length - 1].meat_temp_2_c), temperatureUnit) : '—'}</span>
+            </div>
           )}
           {/* Meater legend entries */}
           {(meaterProbeTemps.length > 0 || meaterAmbientTemps.length > 0) && (
