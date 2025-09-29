@@ -76,7 +76,11 @@ class PiNativeControllerIO:
     def get_control_mode(self) -> str:
         """Get current control mode"""
         return self.controller.get_control_mode()
-    
+
+    def get_temperature_limits(self) -> dict:
+        """Get current temperature limits from configuration"""
+        return self.controller.get_temperature_limits()
+
     def get_status(self) -> dict:
         """Get current controller status (legacy compatible format)"""
         status = self.controller.get_status()

@@ -253,14 +253,20 @@ class EggBotController:
     
     def set_setpoint(self, setpoint_c: float) -> None:
         """Set pit temperature setpoint"""
-        if not (50 <= setpoint_c <= 400):
-            raise ValueError(f"Setpoint {setpoint_c}°C out of range [50-400]°C")
-        
+        # Use configurable safety limits
+        min_temp = self.control_config.safety.min_pit_temp
+        max_temp = self.control_config.safety.max_pit_temp
+
+        if not (min_temp <= setpoint_c <= max_temp):
+            error_msg = f"Setpoint {setpoint_c}°C out of range [{min_temp}-{max_temp}]°C"
+            logging.warning(f"Invalid setpoint request: {error_msg}")
+            raise ValueError(error_msg)
+
         with self._lock:
             self.state.setpoint_c = setpoint_c
-        
+
         self.pid_controller.set_setpoint(setpoint_c)
-        logging.info(f"Setpoint set to {setpoint_c}°C")
+        logging.info(f"Setpoint set to {setpoint_c}°C (range: [{min_temp}-{max_temp}]°C)")
     
     def get_setpoint(self) -> float:
         """Get current pit temperature setpoint"""
@@ -269,18 +275,43 @@ class EggBotController:
     
     def set_meat_setpoint(self, setpoint_c: Optional[float]) -> None:
         """Set meat temperature setpoint"""
-        if setpoint_c is not None and not (0 <= setpoint_c <= 100):
-            raise ValueError(f"Meat setpoint {setpoint_c}°C out of range [0-100]°C")
-        
+        if setpoint_c is not None:
+            # Use configurable safety limits
+            min_temp = self.control_config.safety.min_meat_temp
+            max_temp = self.control_config.safety.max_meat_temp
+
+            if not (min_temp <= setpoint_c <= max_temp):
+                error_msg = f"Meat setpoint {setpoint_c}°C out of range [{min_temp}-{max_temp}]°C"
+                logging.warning(f"Invalid meat setpoint request: {error_msg}")
+                raise ValueError(error_msg)
+
         with self._lock:
             self.state.meat_setpoint_c = setpoint_c
-        
-        logging.info(f"Meat setpoint set to {setpoint_c}°C")
+
+        if setpoint_c is not None:
+            min_temp = self.control_config.safety.min_meat_temp
+            max_temp = self.control_config.safety.max_meat_temp
+            logging.info(f"Meat setpoint set to {setpoint_c}°C (range: [{min_temp}-{max_temp}]°C)")
+        else:
+            logging.info("Meat setpoint cleared (set to None)")
     
     def get_meat_setpoint(self) -> Optional[float]:
         """Get current meat temperature setpoint"""
         with self._lock:
             return self.state.meat_setpoint_c
+
+    def get_temperature_limits(self) -> Dict[str, Dict[str, float]]:
+        """Get current temperature limits from configuration"""
+        return {
+            "pit_temp": {
+                "min": self.control_config.safety.min_pit_temp,
+                "max": self.control_config.safety.max_pit_temp
+            },
+            "meat_temp": {
+                "min": self.control_config.safety.min_meat_temp,
+                "max": self.control_config.safety.max_meat_temp
+            }
+        }
     
     def set_damper_percent(self, percent: float) -> None:
         """Set damper position manually (switches to manual mode)"""

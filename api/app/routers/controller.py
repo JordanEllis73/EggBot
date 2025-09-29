@@ -21,8 +21,13 @@ async def set_setpoint(
     data: SetpointIn, controller: ControllerIO = Depends(get_controller)
 ):
     print(f"Received data: {data}")
-    controller.set_setpoint(data.setpoint_c)
-    return {"ok": True, "setpoint_c": controller.get_setpoint()}
+    try:
+        controller.set_setpoint(data.setpoint_c)
+        return {"ok": True, "setpoint_c": controller.get_setpoint()}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to set setpoint: {str(e)}")
 
 
 @router.post("/meat_setpoint")
@@ -30,8 +35,13 @@ async def set_meat_setpoint(
     data: MeatSetpointIn, controller: ControllerIO = Depends(get_controller)
 ):
     print("received meat_setpoint")
-    controller.set_meat_setpoint(data.meat_setpoint_c)
-    return {"ok": True, "setpoint_c": controller.get_meat_setpoint()}
+    try:
+        controller.set_meat_setpoint(data.meat_setpoint_c)
+        return {"ok": True, "setpoint_c": controller.get_meat_setpoint()}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to set meat setpoint: {str(e)}")
 
 
 @router.post("/damper")
@@ -61,3 +71,12 @@ async def set_control_mode(
 @router.get("/control_mode")
 async def get_control_mode(controller: ControllerIO = Depends(get_controller)):
     return {"control_mode": controller.get_control_mode()}
+
+
+@router.get("/temperature_limits")
+async def get_temperature_limits(controller: ControllerIO = Depends(get_controller)):
+    """Get the configured temperature limits for validation"""
+    try:
+        return controller.get_temperature_limits()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get temperature limits: {str(e)}")
