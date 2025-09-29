@@ -10,10 +10,12 @@ except ImportError:
     PIGPIO_AVAILABLE = False
     logging.warning("pigpio library not available - running in simulation mode")
 
+from pi_native.config.hardware import ServoConfig
+
 class ServoController:
     """Controls servo motor for damper positioning using pigpio"""
     
-    def __init__(self, gpio_pin: int = 18, simulate: bool = False):
+    def __init__(self, gpio_pin: int = 18, simulate: bool = False, config: Optional[ServoConfig] = None):
         self.gpio_pin = gpio_pin
         self.simulate = simulate or not PIGPIO_AVAILABLE
         self._lock = threading.Lock()
@@ -21,16 +23,20 @@ class ServoController:
         self._current_position = 0  # Current servo position (0-100%)
         self._target_position = 0   # Target servo position
         self._last_pulse_width = 0  # Last PWM pulse width sent
-        
-        # Servo parameters (typical values for standard servos)
-        self.min_pulse_width = 500   # Microseconds (0° position)
-        self.max_pulse_width = 2500  # Microseconds (180° position) 
-        self.center_pulse_width = 1500  # Microseconds (90° position)
-        self.pwm_frequency = 50      # Hz (standard servo frequency)
-        
-        # Movement parameters
-        self.max_speed = 20          # Max degrees per second
-        self.position_tolerance = 1  # Degrees tolerance for "reached" position
+
+        # Use provided config or create default ServoConfig
+        if config is None:
+            config = ServoConfig()
+
+        # Servo parameters from config
+        self.min_pulse_width = config.min_pulse_width
+        self.max_pulse_width = config.max_pulse_width
+        self.center_pulse_width = config.center_pulse_width
+        self.pwm_frequency = config.pwm_frequency
+
+        # Movement parameters from config
+        self.max_speed = config.max_speed
+        self.position_tolerance = config.position_tolerance
         
         if not self.simulate:
             self._initialize_pigpio()
@@ -41,6 +47,7 @@ class ServoController:
         self._control_thread.start()
         
         logging.info(f"ServoController initialized on GPIO {self.gpio_pin} (simulate={self.simulate})")
+        logging.info(f"Servo config: min={self.min_pulse_width}μs, max={self.max_pulse_width}μs, center={self.center_pulse_width}μs, speed={self.max_speed}°/s")
     
     def _initialize_pigpio(self) -> None:
         """Initialize pigpio connection"""

@@ -68,7 +68,8 @@ class EggBotController:
         
         self.servo_controller = ServoController(
             gpio_pin=hardware_config.gpio.servo_pin,
-            simulate=simulate
+            simulate=simulate,
+            config=hardware_config.servo
         )
         
         # Controller state

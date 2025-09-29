@@ -93,7 +93,7 @@ def test_servo_control():
     print("\n=== Testing Servo Control ===")
     
     try:
-        servo = ServoController(gpio_pin=18, simulate=False)
+        servo = ServoController(gpio_pin=18, simulate=False, config=hardware_config.servo)
         if servo.simulate:
             print("Running in SIMULATION mode (pigpio not available)")
         else:
@@ -133,7 +133,7 @@ def test_integrated_system():
         # Initialize all components
         adc = ADS1115Manager()
         calc = ThermistorCalculator()
-        servo = ServoController()
+        servo = ServoController(config=hardware_config.servo)
         
         print("All hardware components initialized")
         
