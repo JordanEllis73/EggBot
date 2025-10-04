@@ -249,6 +249,10 @@ class EggBotController:
     def _log_telemetry(self) -> None:
         """Log telemetry data point"""
         with self._lock:
+            # Get PID component breakdown
+            pid_state = self.pid_controller.get_state()
+            pid_tuning = self.pid_controller.get_tuning_info()
+
             # Create telemetry data point
             data_point = {
                 "timestamp": datetime.now().isoformat() + "Z",
@@ -261,6 +265,9 @@ class EggBotController:
                 "damper_percent": self.state.damper_percent,
                 "pid_output": self.state.pid_output,
                 "pid_error": self.state.pid_error,
+                "pid_proportional": pid_tuning.get("proportional_contribution", 0.0),
+                "pid_integral": pid_tuning.get("integral_contribution", 0.0),
+                "pid_derivative": pid_tuning.get("derivative_contribution", 0.0),
                 "control_mode": self.state.control_mode,
                 "safety_shutdown": self.state.safety_shutdown
             }
@@ -554,6 +561,9 @@ class EggBotController:
                 'damper_percent',
                 'pid_output',
                 'pid_error',
+                'pid_proportional',
+                'pid_integral',
+                'pid_derivative',
                 'control_mode',
                 'safety_shutdown'
             ]
@@ -627,6 +637,9 @@ class EggBotController:
         time_since_start = current_time - self.csv_start_time
 
         try:
+            # Get PID component breakdown for CSV
+            pid_tuning = self.pid_controller.get_tuning_info()
+
             # Prepare CSV row data
             csv_row = {
                 'time_since_start_seconds': round(time_since_start, 1),
@@ -640,6 +653,9 @@ class EggBotController:
                 'damper_percent': self.state.damper_percent,
                 'pid_output': self.state.pid_output,
                 'pid_error': self.state.pid_error,
+                'pid_proportional': pid_tuning.get("proportional_contribution", 0.0),
+                'pid_integral': pid_tuning.get("integral_contribution", 0.0),
+                'pid_derivative': pid_tuning.get("derivative_contribution", 0.0),
                 'control_mode': self.state.control_mode,
                 'safety_shutdown': self.state.safety_shutdown
             }

@@ -37,8 +37,8 @@ PID_PRESETS = {
         limits=PIDLimits(
             output_min=0.0,
             output_max=100.0,
-            integral_min=-50.0,
-            integral_max=50.0,
+            integral_min=-20.0,
+            integral_max=20.0,
             derivative_filter=0.2
         ),
         sample_time=2.0

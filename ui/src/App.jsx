@@ -21,6 +21,7 @@ import {
 import { useDebounce } from "./hooks/useDebounce";
 import { getApiTemperature, getDisplayTemperature } from "./utils/temperature";
 import TemperatureChart from "./TemperatureChart";
+import PIDChart from "./PIDChart";
 import StatusDisplay from "./StatusDisplay";
 import CookSettings from "./CookSettings";
 import TemperatureControls from "./TemperatureControls";
@@ -625,22 +626,33 @@ export default function App() {
       </div>
       
       {/* Main Chart Area */}
-      <div style={{ 
-        flex: 1, 
+      <div style={{
+        flex: 1,
         padding: 20,
         display: "flex",
-        flexDirection: "column"
+        flexDirection: "column",
+        gap: "20px"
       }}>
-        <h2 style={{ margin: "0 0 20px 0", fontSize: "20px" }}>Temperature History</h2>
+        {/* Temperature Chart */}
         <div style={{ flex: 1, minHeight: 0 }}>
-          <TemperatureChart 
-            points={telemetry} 
+          <h2 style={{ margin: "0 0 16px 0", fontSize: "20px" }}>Temperature History</h2>
+          <TemperatureChart
+            points={telemetry}
             status={last}
             meaterStatus={meaterStatus}
             meaterHistory={meaterHistory}
             temperatureUnit={temperatureUnit}
-            width={Math.min(window.innerWidth - 380, 1200)} 
-            height={Math.min(window.innerHeight - 120, 600)} 
+            width={Math.min(window.innerWidth - 380, 1200)}
+            height={Math.min((window.innerHeight - 160) / 2, 300)}
+          />
+        </div>
+
+        {/* PID Chart */}
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <PIDChart
+            points={telemetry}
+            width={Math.min(window.innerWidth - 380, 1200)}
+            height={Math.min((window.innerHeight - 160) / 2, 300)}
           />
         </div>
       </div>

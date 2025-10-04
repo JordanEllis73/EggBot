@@ -165,7 +165,7 @@ class PIDController:
                 derivative = 0.0
             
             # Calculate output
-            feedforward = (self.limits.output_max + self.limits.output_min) / 2.0
+            feedforward = (self.limits.output_max - self.limits.output_min) / 4.0 + self.limits.output_min
             output = feedforward + proportional + integral + derivative
             
             # Apply output limits
@@ -185,7 +185,7 @@ class PIDController:
             self.compute_count += 1
             self.total_compute_time += compute_time
             
-            logging.debug(f"PID: SP={self.state.setpoint:.1f}, PV={process_variable:.1f}, "
+            logging.info(f"PID: SP={self.state.setpoint:.1f}, PV={process_variable:.1f}, "
                          f"E={error:.2f}, P={proportional:.2f}, I={integral:.2f}, "
                          f"D={derivative:.2f}, OUT={output:.1f}")
             
