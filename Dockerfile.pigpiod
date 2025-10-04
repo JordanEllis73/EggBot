@@ -9,17 +9,25 @@ RUN apt-get update && \
         gcc \
         make \
         libc6-dev \
-        procps && \
+        procps \
+        build-essential && \
     rm -rf /var/lib/apt/lists/*
 
-# Download and build pigpio
-RUN wget -q https://github.com/joan2937/pigpio/archive/master.zip && \
-    unzip -q master.zip && \
-    cd pigpio-master && \
-    make && \
-    make install && \
-    cd .. && \
-    rm -rf pigpio-master master.zip
+# Try to install pigpio from package first, then build from source if needed
+RUN set -e && \
+    echo "Attempting to install pigpio from Debian package..." && \
+    (apt-get update && apt-get install -y pigpio && echo "pigpio installed from package") || \
+    (echo "Package install failed, building from source..." && \
+     wget -q https://github.com/joan2937/pigpio/archive/master.zip && \
+     unzip -q master.zip && \
+     cd pigpio-master && \
+     echo "Building pigpio (this may take several minutes)..." && \
+     (make -j1 || make) && \
+     make install && \
+     cd .. && \
+     rm -rf pigpio-master master.zip && \
+     echo "pigpio built and installed from source") && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
