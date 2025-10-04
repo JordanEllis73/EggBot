@@ -38,9 +38,34 @@
 - `ui/nginx.conf` - API proxy configuration with Pi IP
 - Environment variables in containers reference Pi-specific settings
 
+## Common Issues and Solutions
+
+### Docker BuildKit Hanging
+If you encounter "resolving provenance for metadata file" hanging during builds:
+
+1. **Option 1: Disable BuildKit temporarily**
+   ```bash
+   export DOCKER_BUILDKIT=0
+   export COMPOSE_DOCKER_CLI_BUILD=0
+   docker-compose -f docker-compose.pi-native.yml build
+   ```
+
+2. **Option 2: Use legacy build mode**
+   ```bash
+   docker-compose -f docker-compose.pi-native.yml build --no-cache --parallel
+   ```
+
+3. **Option 3: Build services individually**
+   ```bash
+   docker-compose -f docker-compose.pi-native.yml build api
+   docker-compose -f docker-compose.pi-native.yml build pigpiod
+   docker-compose -f docker-compose.pi-native.yml build ui
+   ```
+
 ## Notes for Claude
 
 - When discussing testing or deployment, assume it happens on the Raspberry Pi
 - Development and code changes happen on the Ubuntu VM
 - Hardware-specific issues can only be resolved on the Pi environment
 - Docker container testing and debugging should be done on the Pi
+- BuildKit issues are common on ARM64 platforms - provide alternatives when needed

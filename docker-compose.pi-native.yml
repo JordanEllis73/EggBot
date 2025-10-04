@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.pi-native
+      args:
+        BUILDKIT_INLINE_CACHE: 1
     restart: unless-stopped
     volumes:
       - /dev/i2c-1:/dev/i2c-1  # I2C device access
@@ -51,6 +53,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.pigpiod
+      args:
+        BUILDKIT_INLINE_CACHE: 1
     container_name: pigpiod
     restart: unless-stopped
     privileged: true
