@@ -17,7 +17,10 @@ services:
       - "/dev/i2c-1:/dev/i2c-1"
       - "/dev/gpiomem:/dev/gpiomem"
     privileged: true  # Required for GPIO access
-    network_mode: "host"  # Access host's pigpiod service
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
     group_add:
       - "994"  # i2c group GID from host
       - "993"  # gpio group GID from host
@@ -35,8 +38,8 @@ services:
       - BLINKA_FORCECHIP=BCM2711  # Force Pi chip detection
       - BLINKA_FORCEI2C=1  # Force I2C bus selection
       - BLINKA_SKIP_BOARD_DETECTION=1  # Skip automatic board detection
-    # depends_on:
-    #   - pigpiod  # Using native pigpiod service instead
+    depends_on:
+      - pigpiod
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -44,39 +47,38 @@ services:
       retries: 3
       start_period: 40s
 
-  # pigpiod:
-  #   # Commented out - using native pigpiod service on host
-  #   image: debian:bullseye-slim
-  #   container_name: pigpiod
-  #   restart: unless-stopped
-  #   privileged: true
-  #   volumes:
-  #     - /dev:/dev
-  #     - /sys:/sys
-  #   ports:
-  #     - "8888:8888"  # Expose pigpio daemon port
-  #   command: >
-  #     bash -c "
-  #       apt-get update &&
-  #       apt-get install -y wget unzip gcc make procps &&
-  #       wget https://github.com/joan2937/pigpio/archive/master.zip &&
-  #       unzip master.zip &&
-  #       cd pigpio-master &&
-  #       make &&
-  #       make install &&
-  #       cd .. &&
-  #       rm -rf pigpio-master master.zip &&
-  #       echo 'Starting pigpio daemon with enhanced configuration...' &&
-  #       pigpiod -g -v -x -1 -p 8888 -f -t 0
-  #     "
-  #   healthcheck:
-  #     test: ["CMD", "pgrep", "pigpiod"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 3
-  #     start_period: 30s
-  #   networks:
-  #     - app-network
+  pigpiod:
+    image: debian:bullseye-slim
+    container_name: pigpiod
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /dev:/dev
+      - /sys:/sys
+    ports:
+      - "8888:8888"  # Expose pigpio daemon port
+    command: >
+      bash -c "
+        apt-get update &&
+        apt-get install -y wget unzip gcc make procps &&
+        wget https://github.com/joan2937/pigpio/archive/master.zip &&
+        unzip master.zip &&
+        cd pigpio-master &&
+        make &&
+        make install &&
+        cd .. &&
+        rm -rf pigpio-master master.zip &&
+        echo 'Starting pigpio daemon with enhanced configuration...' &&
+        pigpiod -g -v -x -1 -p 8888 -f -t 0
+      "
+    healthcheck:
+      test: ["CMD", "pgrep", "pigpiod"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - app-network
 
   ui:
     build:
@@ -90,8 +92,8 @@ services:
       - VITE_API_URL=http://192.168.1.194:8000
     networks:
       - app-network
-    # depends_on:
-    #   - api  # API uses host networking, dependency not needed
+    depends_on:
+      - api
 
 volumes:
   api_data:
