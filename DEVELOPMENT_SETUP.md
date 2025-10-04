@@ -58,9 +58,18 @@ If you encounter "resolving provenance for metadata file" hanging during builds:
 3. **Option 3: Build services individually**
    ```bash
    docker-compose -f docker-compose.pi-native.yml build api
-   docker-compose -f docker-compose.pi-native.yml build pigpiod
    docker-compose -f docker-compose.pi-native.yml build ui
    ```
+
+### pigpiod Container Solution
+Instead of building pigpiod from source (which causes compilation issues), we use a proven pre-built image:
+
+- **Image**: `zinen2/alpine-pigpiod:latest`
+- **Size**: ~6MB (Alpine Linux based)
+- **Tested**: ✔ Confirmed working on Raspberry Pi 4
+- **Port**: 8888 (standard pigpio daemon port)
+- **Devices**: Uses `/dev/gpiochip0` and `/dev/gpiomem` for GPIO access
+- **No compilation required**: Eliminates all build errors and resource issues
 
 ## Notes for Claude
 

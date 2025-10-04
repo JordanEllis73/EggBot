@@ -50,25 +50,21 @@ services:
       start_period: 40s
 
   pigpiod:
-    build:
-      context: .
-      dockerfile: Dockerfile.pigpiod
-      args:
-        BUILDKIT_INLINE_CACHE: 1
+    image: zinen2/alpine-pigpiod:latest
     container_name: pigpiod
     restart: unless-stopped
     privileged: true
-    volumes:
-      - /dev:/dev
-      - /sys:/sys
+    devices:
+      - "/dev/gpiochip0:/dev/gpiochip0"
+      - "/dev/gpiomem:/dev/gpiomem"
     ports:
       - "8888:8888"  # Expose pigpio daemon port
     healthcheck:
       test: ["CMD", "pgrep", "pigpiod"]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 3
+      start_period: 30s
     networks:
       - app-network
 
