@@ -48,7 +48,9 @@ services:
       start_period: 40s
 
   pigpiod:
-    image: debian:bullseye-slim
+    build:
+      context: .
+      dockerfile: Dockerfile.pigpiod
     container_name: pigpiod
     restart: unless-stopped
     privileged: true
@@ -57,28 +59,12 @@ services:
       - /sys:/sys
     ports:
       - "8888:8888"  # Expose pigpio daemon port
-    command: >
-      bash -c "
-        echo 'Installing pigpio daemon...' &&
-        apt-get update -qq &&
-        apt-get install -y -qq wget unzip gcc make procps &&
-        wget -q https://github.com/joan2937/pigpio/archive/master.zip &&
-        unzip -q master.zip &&
-        cd pigpio-master &&
-        make -s &&
-        make install -s &&
-        cd .. &&
-        rm -rf pigpio-master master.zip &&
-        echo 'pigpio installation complete' &&
-        echo 'Starting pigpio daemon...' &&
-        exec pigpiod -g -v -p 8888 -f
-      "
     healthcheck:
       test: ["CMD", "pgrep", "pigpiod"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - app-network
 
