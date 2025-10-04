@@ -1,33 +1,16 @@
-# Dockerfile for pigpiod daemon
-FROM debian:bullseye-slim
+# Dockerfile for pigpiod daemon - using Ubuntu which has pigpio packages
+FROM ubuntu:22.04
 
-# Install dependencies
+# Set non-interactive installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install pigpio from Ubuntu repositories (much more reliable)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        wget \
-        unzip \
-        gcc \
-        make \
-        libc6-dev \
-        procps \
-        build-essential && \
-    rm -rf /var/lib/apt/lists/*
-
-# Try to install pigpio from package first, then build from source if needed
-RUN set -e && \
-    echo "Attempting to install pigpio from Debian package..." && \
-    (apt-get update && apt-get install -y pigpio && echo "pigpio installed from package") || \
-    (echo "Package install failed, building from source..." && \
-     wget -q https://github.com/joan2937/pigpio/archive/master.zip && \
-     unzip -q master.zip && \
-     cd pigpio-master && \
-     echo "Building pigpio (this may take several minutes)..." && \
-     (make -j1 || make) && \
-     make install && \
-     cd .. && \
-     rm -rf pigpio-master master.zip && \
-     echo "pigpio built and installed from source") && \
-    rm -rf /var/lib/apt/lists/*
+        pigpio \
+        procps && \
+    rm -rf /var/lib/apt/lists/* && \
+    echo "pigpio installed successfully from Ubuntu package"
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
