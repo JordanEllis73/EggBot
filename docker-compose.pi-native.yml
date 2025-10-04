@@ -55,12 +55,15 @@ services:
     volumes:
       - /dev:/dev
       - /sys:/sys
+      - /run/udev:/run/udev:ro  # Access to udev for device information
     ports:
       - "8888:8888"  # Expose pigpio daemon port
     command: >
       bash -c "
+        set -e &&
+        echo 'Installing pigpio daemon...' &&
         apt-get update &&
-        apt-get install -y wget unzip gcc make procps &&
+        apt-get install -y wget unzip gcc make procps netcat-openbsd &&
         wget https://github.com/joan2937/pigpio/archive/master.zip &&
         unzip master.zip &&
         cd pigpio-master &&
@@ -68,17 +71,50 @@ services:
         make install &&
         cd .. &&
         rm -rf pigpio-master master.zip &&
+        echo 'Setting up GPIO permissions...' &&
+        chmod 666 /dev/gpiomem 2>/dev/null || echo 'gpiomem not available, continuing...' &&
+        echo 'Creating pigpio startup validation script...' &&
+        cat > /usr/local/bin/validate_pigpio.sh << 'EOF'
+#!/bin/bash
+echo 'Validating pigpio daemon startup...'
+for i in {1..30}; do
+    if pgrep pigpiod > /dev/null && nc -z localhost 8888; then
+        echo 'pigpio daemon is running and listening on port 8888'
+        # Test basic pigpio commands
+        if echo 'HWVER' | nc -w 2 localhost 8888 | grep -q '^[0-9]'; then
+            echo 'pigpio daemon responding to commands correctly'
+            exit 0
+        else
+            echo 'pigpio daemon not responding to commands properly'
+        fi
+    fi
+    echo \"Attempt \$i/30: pigpio daemon not ready, waiting...\"
+    sleep 2
+done
+echo 'pigpio daemon failed to start properly'
+exit 1
+EOF
+        chmod +x /usr/local/bin/validate_pigpio.sh &&
         echo 'Starting pigpio daemon with enhanced configuration...' &&
-        pigpiod -g -v -x -1 -p 8888 -f -t 0
+        echo 'Configuration: -g (allow remote GPIO), -v (verbose), -x (disable alerts), -p 8888 (port), -f (foreground), -t 0 (no clock tick), -k (keep alive)' &&
+        pigpiod -g -v -x -1 -p 8888 -f -t 0 -k &
+        PIGPIO_PID=\$! &&
+        echo \"pigpio daemon started with PID \$PIGPIO_PID\" &&
+        /usr/local/bin/validate_pigpio.sh &&
+        echo 'pigpio daemon validated successfully, keeping container running...' &&
+        wait \$PIGPIO_PID
       "
     healthcheck:
-      test: ["CMD", "pgrep", "pigpiod"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+      test: ["CMD", "sh", "-c", "pgrep pigpiod && nc -z localhost 8888"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
     networks:
       - app-network
+    environment:
+      - PIGPIO_ADDR=0.0.0.0  # Listen on all interfaces
+      - PIGPIO_PORT=8888
 
   ui:
     build:
