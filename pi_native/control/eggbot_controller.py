@@ -73,7 +73,7 @@ class EggBotController:
             gpio_pin=hardware_config.gpio.servo_pin,
             simulate=simulate,
             config=hardware_config.servo,
-            pigpio_host="pigpiod",  # Use Docker service name
+            pigpio_host="localhost",  # Use host's native pigpiod
             pigpio_port=8888
         )
         
