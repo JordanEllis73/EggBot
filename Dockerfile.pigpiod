@@ -1,16 +1,26 @@
-# Dockerfile for pigpiod daemon - using Ubuntu which has pigpio packages
-FROM ubuntu:22.04
+# Dockerfile for pigpiod daemon - minimal build approach
+FROM debian:bullseye-slim
 
-# Set non-interactive installation
-ENV DEBIAN_FRONTEND=noninteractive
-
-# Install pigpio from Ubuntu repositories (much more reliable)
+# Install minimal dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        pigpio \
+        wget \
+        unzip \
+        gcc \
+        libc6-dev \
+        make \
         procps && \
-    rm -rf /var/lib/apt/lists/* && \
-    echo "pigpio installed successfully from Ubuntu package"
+    rm -rf /var/lib/apt/lists/*
+
+# Download and install pigpio with minimal flags - specific version
+RUN wget http://abyz.me.uk/rpi/pigpio/pigpio.zip && \
+    unzip pigpio.zip && \
+    cd PIGPIO && \
+    make pigpiod && \
+    cp pigpiod /usr/local/bin/ && \
+    cd .. && \
+    rm -rf pigpio.zip PIGPIO && \
+    echo "pigpio daemon installed"
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
