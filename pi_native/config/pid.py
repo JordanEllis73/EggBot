@@ -18,8 +18,8 @@ class PIDLimits:
     """PID controller limits and constraints"""
     output_min: float = 0.0      # Minimum output value (0% damper)
     output_max: float = 100.0    # Maximum output value (100% damper)
-    integral_min: float = -50.0  # Integral windup limit (negative)
-    integral_max: float = 50.0   # Integral windup limit (positive)
+    integral_min: float = -150.0  # Integral windup limit (negative)
+    integral_max: float = 150.0   # Integral windup limit (positive)
     derivative_filter: float = 0.1  # Low-pass filter for derivative term (0-1)
 
 @dataclass
@@ -37,8 +37,8 @@ PID_PRESETS = {
         limits=PIDLimits(
             output_min=0.0,
             output_max=100.0,
-            integral_min=-20.0,
-            integral_max=20.0,
+            integral_min=-50.0,
+            integral_max=50.0,
             derivative_filter=0.2
         ),
         sample_time=2.0

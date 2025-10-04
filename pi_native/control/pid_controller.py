@@ -165,7 +165,8 @@ class PIDController:
                 derivative = 0.0
             
             # Calculate output
-            output = proportional + integral + derivative
+            feedforward = (self.limits.output_max + self.limits.output_min) / 2.0
+            output = feedforward + proportional + integral + derivative
             
             # Apply output limits
             output = max(self.limits.output_min, min(self.limits.output_max, output))
