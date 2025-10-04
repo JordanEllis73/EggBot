@@ -12,15 +12,16 @@ RUN apt-get update && \
         procps && \
     rm -rf /var/lib/apt/lists/*
 
-# Download and install pigpio with minimal flags - specific version
-RUN wget http://abyz.me.uk/rpi/pigpio/pigpio.zip && \
-    unzip pigpio.zip && \
-    cd PIGPIO && \
-    make pigpiod && \
+# Download and build only pigpiod daemon - minimal approach
+RUN wget -q https://github.com/joan2937/pigpio/archive/master.zip && \
+    unzip -q master.zip && \
+    cd pigpio-master && \
+    echo "Building only pigpiod daemon..." && \
+    gcc -o pigpiod -O3 -Wall -pthread pigpiod.c command.c && \
     cp pigpiod /usr/local/bin/ && \
     cd .. && \
-    rm -rf pigpio.zip PIGPIO && \
-    echo "pigpio daemon installed"
+    rm -rf master.zip pigpio-master && \
+    echo "pigpiod daemon installed successfully"
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
