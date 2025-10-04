@@ -17,7 +17,10 @@ services:
       - "/dev/i2c-1:/dev/i2c-1"
       - "/dev/gpiomem:/dev/gpiomem"
     privileged: true  # Required for GPIO access
-    network_mode: "host"
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
     group_add:
       - "994"  # i2c group GID from host
       - "993"  # gpio group GID from host
@@ -68,13 +71,17 @@ services:
       - app-network
 
   ui:
-    image: ghcr.io/jordanellis73/eggbot/ui:latest
-    pull_policy: missing
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+      target: production
     restart: unless-stopped
     ports:
       - "80:80"
     environment:
       - VITE_API_URL=http://192.168.1.194:8000
+    networks:
+      - app-network
     depends_on:
       - api
 
