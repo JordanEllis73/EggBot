@@ -54,10 +54,13 @@ services:
     privileged: true
     volumes:
       - /dev:/dev
+      - /sys:/sys
+    ports:
+      - "8888:8888"  # Expose pigpio daemon port
     command: >
       bash -c "
         apt-get update &&
-        apt-get install -y wget unzip gcc make &&
+        apt-get install -y wget unzip gcc make procps &&
         wget https://github.com/joan2937/pigpio/archive/master.zip &&
         unzip master.zip &&
         cd pigpio-master &&
@@ -65,8 +68,15 @@ services:
         make install &&
         cd .. &&
         rm -rf pigpio-master master.zip &&
-        pigpiod -g
+        echo 'Starting pigpio daemon with enhanced configuration...' &&
+        pigpiod -g -v -x -1 -p 8888 -f -t 0
       "
+    healthcheck:
+      test: ["CMD", "pgrep", "pigpiod"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     networks:
       - app-network
 

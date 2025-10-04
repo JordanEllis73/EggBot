@@ -72,7 +72,9 @@ class EggBotController:
         self.servo_controller = ServoController(
             gpio_pin=hardware_config.gpio.servo_pin,
             simulate=simulate,
-            config=hardware_config.servo
+            config=hardware_config.servo,
+            pigpio_host="pigpiod",  # Use Docker service name
+            pigpio_port=8888
         )
         
         # Controller state
@@ -337,6 +339,59 @@ class EggBotController:
                 "max": self.control_config.safety.max_meat_temp
             }
         }
+
+    def get_servo_diagnostics(self) -> Dict[str, Any]:
+        """Get servo diagnostics information"""
+        return self.servo_controller.get_servo_diagnostics()
+
+    def test_servo_connectivity(self) -> Dict[str, Any]:
+        """Test servo connectivity and return results"""
+        return self.servo_controller.test_servo_connectivity()
+
+    def test_servo_movement(self) -> Dict[str, Any]:
+        """Test servo movement functionality"""
+        try:
+            initial_position = self.servo_controller.get_position_percent()
+
+            # Test sequence: move to different positions
+            test_positions = [25, 75, 50]
+            results = []
+
+            for position in test_positions:
+                start_time = time.time()
+                self.servo_controller.set_position_percent(position)
+
+                # Wait for movement to complete
+                timeout = 10.0  # 10 second timeout
+                while (time.time() - start_time < timeout and
+                       not self.servo_controller.is_at_target()):
+                    time.sleep(0.1)
+
+                actual_position = self.servo_controller.get_position_percent()
+                move_time = time.time() - start_time
+
+                results.append({
+                    "target_position": position,
+                    "actual_position": actual_position,
+                    "move_time_seconds": move_time,
+                    "position_error": abs(position - actual_position),
+                    "timeout": move_time >= timeout
+                })
+
+            # Return to initial position
+            self.servo_controller.set_position_percent(initial_position)
+
+            return {
+                "success": True,
+                "test_results": results,
+                "initial_position": initial_position
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
     
     def set_damper_percent(self, percent: float) -> None:
         """Set damper position manually (switches to manual mode)"""

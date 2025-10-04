@@ -196,6 +196,18 @@ class PiNativeControllerIO:
         """Get CSV logging status"""
         return self.controller.get_csv_logging_status()
 
+    def get_servo_diagnostics(self) -> dict:
+        """Get servo diagnostics information"""
+        return self.controller.get_servo_diagnostics()
+
+    def test_servo_connectivity(self) -> dict:
+        """Test servo connectivity"""
+        return self.controller.test_servo_connectivity()
+
+    def test_servo_movement(self) -> dict:
+        """Test servo movement functionality"""
+        return self.controller.test_servo_movement()
+
     def close(self) -> None:
         """Clean shutdown of the controller"""
         if hasattr(self, 'controller'):

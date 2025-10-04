@@ -263,3 +263,39 @@ async def get_csv_logging_status(controller: ControllerIO = Depends(get_pi_contr
         return controller.get_csv_logging_status()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get CSV logging status: {str(e)}")
+
+
+# Servo Diagnostics endpoints
+@router.get("/servo/diagnostics")
+async def get_servo_diagnostics(controller: ControllerIO = Depends(get_pi_controller)):
+    """Get comprehensive servo diagnostics information"""
+    try:
+        return controller.get_servo_diagnostics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get servo diagnostics: {str(e)}")
+
+
+@router.post("/servo/test/connectivity")
+async def test_servo_connectivity(controller: ControllerIO = Depends(get_pi_controller)):
+    """Test servo connectivity to pigpio daemon"""
+    try:
+        result = controller.test_servo_connectivity()
+        return {
+            "ok": True,
+            "test_results": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to test servo connectivity: {str(e)}")
+
+
+@router.post("/servo/test/movement")
+async def test_servo_movement(controller: ControllerIO = Depends(get_pi_controller)):
+    """Test servo movement functionality"""
+    try:
+        result = controller.test_servo_movement()
+        return {
+            "ok": True,
+            "test_results": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to test servo movement: {str(e)}")
