@@ -17,10 +17,30 @@ class CalibrationPersistence:
 
     def __init__(self, config_file: Optional[Path] = None):
         self.config_file = config_file or CALIBRATION_FILE
-        self.config_file.parent.mkdir(parents=True, exist_ok=True)
+        self._initialized = False
+
+    def _ensure_config_dir(self) -> bool:
+        """Ensure config directory exists, return success status"""
+        if self._initialized:
+            return True
+
+        try:
+            self.config_file.parent.mkdir(parents=True, exist_ok=True)
+            self._initialized = True
+            return True
+        except PermissionError:
+            logging.warning(f"Cannot create config directory {self.config_file.parent}, calibrations will not persist")
+            return False
+        except Exception as e:
+            logging.error(f"Error creating config directory: {e}")
+            return False
 
     def save_calibration(self, probe_name: str, offset_c: float) -> None:
         """Save calibration offset for a probe"""
+        if not self._ensure_config_dir():
+            logging.warning(f"Cannot save calibration for {probe_name}: config directory not writable")
+            return
+
         try:
             # Load existing calibrations
             calibrations = self._load_all()
@@ -64,14 +84,17 @@ class CalibrationPersistence:
 
     def _load_all(self) -> Dict:
         """Load all calibrations from file"""
-        if not self.config_file.exists():
-            return {}
-
         try:
+            if not self.config_file.exists():
+                return {}
+
             with open(self.config_file, 'r') as f:
                 return json.load(f)
         except json.JSONDecodeError:
             logging.warning(f"Corrupted calibration file {self.config_file}, starting fresh")
+            return {}
+        except PermissionError:
+            logging.warning(f"No permission to read calibration file {self.config_file}")
             return {}
         except Exception as e:
             logging.error(f"Error reading calibration file: {e}")
