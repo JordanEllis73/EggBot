@@ -9,6 +9,7 @@ from pi_native.hardware.ads1115_manager import ADS1115Manager, ProbeReading
 from pi_native.hardware.thermistor_calc import ThermistorCalculator
 from pi_native.config.hardware import hardware_config, PROBE_CHANNEL_MAP
 from pi_native.config.pid import SafetyLimits
+from pi_native.config.persistence import calibration_persistence
 
 @dataclass
 class TemperatureReading:
@@ -56,7 +57,10 @@ class TemperatureMonitor:
         for channel in range(4):
             config = hardware_config.get_probe_config(channel)
             self.calculator.set_probe_config(channel, config)
-        
+
+        # Load saved calibrations from persistent storage
+        self._load_saved_calibrations()
+
         # Probe status tracking
         self.probes: Dict[str, ProbeStatus] = {}
         self._initialize_probes()
@@ -313,22 +317,74 @@ class TemperatureMonitor:
             "meat_probe_2": temps.get("meat_probe_2")
         }
     
+    def _load_saved_calibrations(self) -> None:
+        """Load saved probe calibrations from persistent storage"""
+        try:
+            calibrations = calibration_persistence.load_all_calibrations()
+            for probe_name, offset_c in calibrations.items():
+                try:
+                    # Get the channel for this probe
+                    from pi_native.config.hardware import CHANNEL_PROBE_MAP
+                    channel = CHANNEL_PROBE_MAP.get(probe_name)
+                    if channel is None:
+                        logging.warning(f"Unknown probe in calibration file: {probe_name}")
+                        continue
+
+                    # Apply the saved offset
+                    config = self.calculator.get_probe_config(channel)
+                    config.offset_c = offset_c
+                    self.calculator.set_probe_config(channel, config)
+                    hardware_config.set_probe_config(channel, config)
+
+                    logging.info(f"Loaded saved calibration for {probe_name}: offset={offset_c:.2f}°C")
+                except Exception as e:
+                    logging.error(f"Failed to load calibration for {probe_name}: {e}")
+
+        except Exception as e:
+            logging.error(f"Failed to load saved calibrations: {e}")
+
     def calibrate_probe(self, probe_name: str, actual_temperature: float) -> None:
-        """Calibrate a probe based on known actual temperature"""
+        """Calibrate a probe based on known actual temperature
+
+        Averages readings over 3 seconds to reduce noise, then calculates and saves
+        the calibration offset.
+        """
         probe = self.probes.get(probe_name)
         if not probe or not probe.last_reading or not probe.last_reading.is_valid:
             raise ValueError(f"Cannot calibrate {probe_name}: no valid reading available")
-        
+
         channel = probe.channel
-        measured_temp = probe.last_reading.temperature_c
-        
+
+        # Average readings over 3 seconds
+        logging.info(f"Calibrating {probe_name}: averaging readings over 3 seconds...")
+        readings = []
+        start_time = time.time()
+
+        while time.time() - start_time < 3.0:
+            # Get current reading
+            current_probe = self.probes.get(probe_name)
+            if current_probe and current_probe.last_reading and current_probe.last_reading.is_valid:
+                readings.append(current_probe.last_reading.temperature_c)
+            time.sleep(0.1)  # Sample every 100ms
+
+        if not readings:
+            raise ValueError(f"Cannot calibrate {probe_name}: no valid readings collected")
+
+        # Calculate average
+        measured_temp = sum(readings) / len(readings)
+        logging.info(f"Averaged {len(readings)} readings: {measured_temp:.2f}°C")
+
+        # Calculate and apply calibration
         self.calculator.calibrate_probe(channel, measured_temp, actual_temperature)
-        
+
         # Update hardware config
         config = self.calculator.get_probe_config(channel)
         hardware_config.set_probe_config(channel, config)
-        
-        logging.info(f"Probe {probe_name} calibrated: offset = {config.offset_c:.2f}°C")
+
+        # Save to persistent storage
+        calibration_persistence.save_calibration(probe_name, config.offset_c)
+
+        logging.info(f"Probe {probe_name} calibrated: offset = {config.offset_c:.2f}°C (saved to disk)")
     
     def is_safety_shutdown(self) -> bool:
         """Check if system is in safety shutdown mode"""

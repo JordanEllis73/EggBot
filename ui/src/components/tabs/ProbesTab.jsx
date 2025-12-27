@@ -1,9 +1,12 @@
 import MeaterControls from '../../MeaterControls';
+import ThermistorCalibration from '../ThermistorCalibration';
 
-export default function ProbesTab({ temperatureUnit }) {
+export default function ProbesTab({ temperatureUnit, status }) {
   return (
-    <div style={{ maxWidth: 500 }}>
+    <div style={{ maxWidth: 600 }}>
       <h2 style={{ margin: '0 0 20px 0', fontSize: 20 }}>Probe Management</h2>
+
+      <ThermistorCalibration status={status} temperatureUnit={temperatureUnit} />
 
       <div style={{
         background: '#1a1a1a',

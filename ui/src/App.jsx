@@ -515,7 +515,7 @@ export default function App() {
     {
       id: 'probes',
       label: 'Probes',
-      content: <ProbesTab temperatureUnit={temperatureUnit} />
+      content: <ProbesTab temperatureUnit={temperatureUnit} status={last} />
     }
   ];
 
