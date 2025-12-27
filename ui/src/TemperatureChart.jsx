@@ -25,21 +25,25 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
 
   if (!points?.length) {
     return (
-      <div
-        ref={containerRef}
-        style={{
-          width: '100%',
-          height: '100%',
-          minHeight: 300,
-          background: "#111",
-          borderRadius: 8,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#666"
-        }}
-      >
-        No telemetry data available
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <div
+          ref={containerRef}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "#111",
+            borderRadius: 8,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#666"
+          }}
+        >
+          No telemetry data available
+        </div>
       </div>
     );
   }
@@ -108,21 +112,25 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
 
   if (allTemps.length === 0) {
     return (
-      <div
-        ref={containerRef}
-        style={{
-          width: '100%',
-          height: '100%',
-          minHeight: 300,
-          background: "#111",
-          borderRadius: 8,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#666"
-        }}
-      >
-        No temperature data
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <div
+          ref={containerRef}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "#111",
+            borderRadius: 8,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#666"
+          }}
+        >
+          No temperature data
+        </div>
       </div>
     );
   }
@@ -220,16 +228,18 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
   const isMeaterAmbientConnected = meaterAmbientTemps.some(t => t != null);
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-        minHeight: 300
-      }}
-    >
-      <svg width={width} height={height} style={{ background: "#111", borderRadius: 8 }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div
+        ref={containerRef}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0
+        }}
+      >
+        <svg width={width} height={height} style={{ background: "#111", borderRadius: 8 }}>
         {tempTicks.map((tick, i) => (
           <line
             key={`temp-grid-${i}`}
@@ -537,6 +547,7 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

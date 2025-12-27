@@ -24,21 +24,25 @@ export default function PIDChart({ points }) {
 
   if (!points?.length) {
     return (
-      <div
-        ref={containerRef}
-        style={{
-          width: '100%',
-          height: '100%',
-          minHeight: 250,
-          background: "#111",
-          borderRadius: 8,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#666"
-        }}
-      >
-        No PID data available
+      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <div
+          ref={containerRef}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "#111",
+            borderRadius: 8,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#666"
+          }}
+        >
+          No PID data available
+        </div>
       </div>
     );
   }
@@ -113,18 +117,23 @@ export default function PIDChart({ points }) {
   }
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        width: '100%',
-        height: '100%',
-        minHeight: 250,
-        background: "#111",
-        borderRadius: 8,
-        padding: 16,
-        boxSizing: 'border-box'
-      }}
-    >
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div
+        ref={containerRef}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "#111",
+          borderRadius: 8,
+          padding: 16,
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
       <svg width={width - 32} height={height - 82} style={{ background: "#111" }}>
         <g transform={`translate(${padding.left}, ${padding.top})`}>
           {pidGridLines.map((line, i) => (
@@ -275,6 +284,7 @@ export default function PIDChart({ points }) {
           }}></div>
           <span style={{ color: "#888", fontSize: 12 }}>Damper %</span>
         </div>
+      </div>
       </div>
     </div>
   );
