@@ -1,62 +1,26 @@
-import { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { getDisplayTemperature, formatTemperature } from './utils/temperature';
 
+// Fixed viewBox dimensions - SVG scales via CSS
+const WIDTH = 900;
+const HEIGHT = 400;
+
 export default function TemperatureChart({ points, status, meaterStatus, meaterHistory = [], temperatureUnit = 'C' }) {
-  const containerRef = useRef(null);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
-
-  // Measure container and update dimensions
-  const updateDimensions = () => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const newWidth = Math.floor(rect.width);
-      const newHeight = Math.floor(rect.height);
-      if (newWidth > 0 && newHeight > 0) {
-        setDimensions({ width: newWidth, height: newHeight });
-      }
-    }
-  };
-
-  // Measure on mount and window resize only
-  useLayoutEffect(() => {
-    updateDimensions();
-
-    let resizeTimeout;
-    const handleResize = () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(updateDimensions, 100);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      clearTimeout(resizeTimeout);
-    };
-  }, []);
-
-  const { width, height } = dimensions;
+  const width = WIDTH;
+  const height = HEIGHT;
 
   if (!points?.length) {
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <div
-          ref={containerRef}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "#111",
-            borderRadius: 8,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#666"
-          }}
-        >
-          No telemetry data available
-        </div>
+      <div style={{
+        width: '100%',
+        height: '100%',
+        background: "#111",
+        borderRadius: 8,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#666"
+      }}>
+        No telemetry data available
       </div>
     );
   }
@@ -125,25 +89,17 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
 
   if (allTemps.length === 0) {
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <div
-          ref={containerRef}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "#111",
-            borderRadius: 8,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#666"
-          }}
-        >
-          No temperature data
-        </div>
+      <div style={{
+        width: '100%',
+        height: '100%',
+        background: "#111",
+        borderRadius: 8,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#666"
+      }}>
+        No temperature data
       </div>
     );
   }
@@ -242,17 +198,17 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <div
-        ref={containerRef}
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0
+          width: '100%',
+          height: '100%',
+          background: "#111",
+          borderRadius: 8,
+          display: 'block'
         }}
       >
-        <svg width={width} height={height} style={{ background: "#111", borderRadius: 8 }}>
         {tempTicks.map((tick, i) => (
           <line
             key={`temp-grid-${i}`}
@@ -560,7 +516,6 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
             </div>
           )}
         </div>
-      </div>
       </div>
     </div>
   );

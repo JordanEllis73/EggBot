@@ -1,61 +1,24 @@
-import { useRef, useState, useLayoutEffect } from 'react';
+// Fixed viewBox dimensions - SVG scales via CSS
+const WIDTH = 900;
+const HEIGHT = 400;
 
 export default function PIDChart({ points }) {
-  const containerRef = useRef(null);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
-
-  // Measure container and update dimensions
-  const updateDimensions = () => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const newWidth = Math.floor(rect.width);
-      const newHeight = Math.floor(rect.height);
-      if (newWidth > 0 && newHeight > 0) {
-        setDimensions({ width: newWidth, height: newHeight });
-      }
-    }
-  };
-
-  // Measure on mount and window resize only
-  useLayoutEffect(() => {
-    updateDimensions();
-
-    let resizeTimeout;
-    const handleResize = () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(updateDimensions, 100);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      clearTimeout(resizeTimeout);
-    };
-  }, []);
-
-  const { width, height } = dimensions;
+  const width = WIDTH;
+  const height = HEIGHT;
 
   if (!points?.length) {
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        <div
-          ref={containerRef}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "#111",
-            borderRadius: 8,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#666"
-          }}
-        >
-          No PID data available
-        </div>
+      <div style={{
+        width: '100%',
+        height: '100%',
+        background: "#111",
+        borderRadius: 8,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#666"
+      }}>
+        No PID data available
       </div>
     );
   }
@@ -130,24 +93,21 @@ export default function PIDChart({ points }) {
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <div
-        ref={containerRef}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "#111",
-          borderRadius: 8,
-          padding: 16,
-          boxSizing: 'border-box',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
+    <div style={{
+      width: '100%',
+      height: '100%',
+      background: "#111",
+      borderRadius: 8,
+      padding: 16,
+      boxSizing: 'border-box',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      <svg
+        viewBox={`0 0 ${width - 32} ${height - 82}`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ flex: 1, width: '100%' }}
       >
-      <svg width={width - 32} height={height - 82} style={{ background: "#111" }}>
         <g transform={`translate(${padding.left}, ${padding.top})`}>
           {pidGridLines.map((line, i) => (
             <g key={`pid-grid-${i}`}>
@@ -297,7 +257,6 @@ export default function PIDChart({ points }) {
           }}></div>
           <span style={{ color: "#888", fontSize: 12 }}>Damper %</span>
         </div>
-      </div>
       </div>
     </div>
   );
