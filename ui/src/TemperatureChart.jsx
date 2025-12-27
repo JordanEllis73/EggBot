@@ -1,32 +1,37 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { getDisplayTemperature, formatTemperature } from './utils/temperature';
 
 export default function TemperatureChart({ points, status, meaterStatus, meaterHistory = [], temperatureUnit = 'C' }) {
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
-  const lastDimensions = useRef({ width: 800, height: 400 });
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const resizeObserver = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        const newWidth = Math.floor(entry.contentRect.width);
-        const newHeight = Math.floor(entry.contentRect.height);
-
-        // Only update if dimensions changed by more than 1px to prevent flickering
-        const widthChanged = Math.abs(newWidth - lastDimensions.current.width) > 1;
-        const heightChanged = Math.abs(newHeight - lastDimensions.current.height) > 1;
-
-        if ((widthChanged || heightChanged) && newWidth > 0 && newHeight > 0) {
-          lastDimensions.current = { width: newWidth, height: newHeight };
-          setDimensions({ width: newWidth, height: newHeight });
-        }
+  // Measure container and update dimensions
+  const updateDimensions = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const newWidth = Math.floor(rect.width);
+      const newHeight = Math.floor(rect.height);
+      if (newWidth > 0 && newHeight > 0) {
+        setDimensions({ width: newWidth, height: newHeight });
       }
-    });
+    }
+  };
 
-    resizeObserver.observe(containerRef.current);
-    return () => resizeObserver.disconnect();
+  // Measure on mount and window resize only
+  useLayoutEffect(() => {
+    updateDimensions();
+
+    let resizeTimeout;
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(updateDimensions, 100);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimeout);
+    };
   }, []);
 
   const { width, height } = dimensions;
