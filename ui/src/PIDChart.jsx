@@ -3,15 +3,23 @@ import { useRef, useState, useEffect } from 'react';
 export default function PIDChart({ points }) {
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 400 });
+  const lastDimensions = useRef({ width: 800, height: 400 });
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     const resizeObserver = new ResizeObserver(entries => {
       for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0) {
-          setDimensions({ width, height });
+        const newWidth = Math.floor(entry.contentRect.width);
+        const newHeight = Math.floor(entry.contentRect.height);
+
+        // Only update if dimensions changed by more than 1px to prevent flickering
+        const widthChanged = Math.abs(newWidth - lastDimensions.current.width) > 1;
+        const heightChanged = Math.abs(newHeight - lastDimensions.current.height) > 1;
+
+        if ((widthChanged || heightChanged) && newWidth > 0 && newHeight > 0) {
+          lastDimensions.current = { width: newWidth, height: newHeight };
+          setDimensions({ width: newWidth, height: newHeight });
         }
       }
     });
