@@ -33,7 +33,7 @@ class PIDConfig:
 # Predefined PID tuning presets for different cooking scenarios
 PID_PRESETS = {
     "conservative": PIDConfig(
-        gains=PIDGains(kp=2.0, ki=0.1, kd=1.0),
+        gains=PIDGains(kp=1.0, ki=0.01, kd=5.0),
         limits=PIDLimits(
             output_min=0.0,
             output_max=100.0,

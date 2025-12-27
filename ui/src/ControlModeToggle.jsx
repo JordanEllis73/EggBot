@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import { setControlMode } from './api';
 
-export default function ControlModeToggle({ 
-  controlMode = 'manual', 
+export default function ControlModeToggle({
+  controlMode = 'manual',
   onControlModeChange,
-  disabled = false 
+  disabled = false,
+  compact = false
 }) {
   const [isChanging, setIsChanging] = useState(false);
 
   const handleToggle = async () => {
     if (isChanging || disabled) return;
-    
+
     const newMode = controlMode === 'manual' ? 'automatic' : 'manual';
     setIsChanging(true);
-    
+
     try {
       await setControlMode(newMode);
       onControlModeChange(newMode);
@@ -25,10 +26,44 @@ export default function ControlModeToggle({
     }
   };
 
+  if (compact) {
+    return (
+      <button
+        onClick={handleToggle}
+        disabled={isChanging || disabled}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '6px 12px',
+          borderRadius: 16,
+          border: `2px solid ${controlMode === 'automatic' ? '#00aa00' : '#666'}`,
+          background: controlMode === 'automatic' ? '#00aa00' : '#333',
+          color: controlMode === 'automatic' ? 'white' : '#eaeaea',
+          fontSize: 13,
+          cursor: (isChanging || disabled) ? 'not-allowed' : 'pointer',
+          opacity: (isChanging || disabled) ? 0.6 : 1,
+          fontWeight: 'bold',
+          transition: 'all 0.2s ease'
+        }}
+      >
+        {isChanging ? (
+          '...'
+        ) : (
+          <>
+            <span style={{ marginRight: 6, fontSize: 14 }}>
+              {controlMode === 'automatic' ? '🤖' : '👤'}
+            </span>
+            {controlMode === 'automatic' ? 'Auto' : 'Manual'}
+          </>
+        )}
+      </button>
+    );
+  }
+
   return (
     <div style={{ background: "#1a1a1a", padding: 16, borderRadius: 8, marginBottom: 20 }}>
       <h3 style={{ margin: "0 0 16px 0" }}>Control Mode</h3>
-      
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <button
           onClick={handleToggle}
@@ -64,9 +99,9 @@ export default function ControlModeToggle({
             'Switching...'
           ) : (
             <>
-              <span style={{ 
+              <span style={{
                 marginRight: 8,
-                fontSize: 16 
+                fontSize: 16
               }}>
                 {controlMode === 'automatic' ? '🤖' : '👤'}
               </span>
@@ -74,7 +109,7 @@ export default function ControlModeToggle({
             </>
           )}
         </button>
-        
+
         <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.4 }}>
           {controlMode === 'manual' ? (
             <span>
@@ -89,18 +124,18 @@ export default function ControlModeToggle({
           )}
         </div>
       </div>
-      
+
       {controlMode === 'automatic' && (
-        <div style={{ 
-          marginTop: 12, 
-          padding: 8, 
-          background: '#2a2a2a', 
+        <div style={{
+          marginTop: 12,
+          padding: 8,
+          background: '#2a2a2a',
           borderRadius: 4,
           fontSize: 11,
           color: '#aaa',
           borderLeft: '3px solid #00aa00'
         }}>
-          <strong>Note:</strong> In automatic mode, the system uses PID control to adjust the damper 
+          <strong>Note:</strong> In automatic mode, the system uses PID control to adjust the damper
           based on the temperature setpoint. Manual damper adjustments will be overridden.
         </div>
       )}

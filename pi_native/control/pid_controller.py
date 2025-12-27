@@ -140,13 +140,13 @@ class PIDController:
             proportional = self.gains.kp * error
             
             # Integral term with anti-windup
-            self.state.integral += self.gains.ki * error * dt
+            self.state.integral += error * dt
             
             # Clamp integral to prevent windup
             self.state.integral = max(self.limits.integral_min,
                                     min(self.limits.integral_max, self.state.integral))
             
-            integral = self.state.integral
+            integral = self.gains.ki * self.state.integral
             
             # Derivative term with filtering
             if dt > 0:
