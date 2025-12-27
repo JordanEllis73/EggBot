@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { calibrateProbe } from '../api';
 import { getDisplayTemperature, getApiTemperature, formatTemperature } from '../utils/temperature';
+import useMediaQuery from '../hooks/useMediaQuery';
+import useTouchDevice from '../hooks/useTouchDevice';
 
 export default function ThermistorCalibration({ status, temperatureUnit }) {
+  const { isMobile } = useMediaQuery();
+  const isTouchDevice = useTouchDevice();
+
   const [calibrationInputs, setCalibrationInputs] = useState({
     pit_probe: '',
     meat_probe_1: '',
@@ -127,12 +132,13 @@ export default function ThermistorCalibration({ status, temperatureUnit }) {
                   placeholder={`e.g., 0 (ice water)`}
                   style={{
                     width: '100%',
-                    padding: '8px 12px',
+                    padding: isTouchDevice ? 12 : '8px 12px',
                     background: '#111',
                     border: '1px solid #444',
                     borderRadius: 4,
                     color: '#eee',
-                    fontSize: 14,
+                    fontSize: isMobile ? 16 : 14,
+                    minHeight: isTouchDevice ? 44 : 'auto',
                     boxSizing: 'border-box'
                   }}
                 />
@@ -142,14 +148,15 @@ export default function ThermistorCalibration({ status, temperatureUnit }) {
                 onClick={() => handleCalibrate(probe.name)}
                 disabled={calibrating[probe.name] || !calibrationInputs[probe.name]}
                 style={{
-                  padding: '8px 16px',
+                  padding: isTouchDevice ? '12px 16px' : '8px 16px',
                   background: calibrating[probe.name] || !calibrationInputs[probe.name] ? '#444' : '#00aa00',
                   color: calibrating[probe.name] || !calibrationInputs[probe.name] ? '#888' : 'white',
                   border: 'none',
                   borderRadius: 4,
                   cursor: calibrating[probe.name] || !calibrationInputs[probe.name] ? 'not-allowed' : 'pointer',
-                  fontSize: 14,
+                  fontSize: isMobile ? 15 : 14,
                   fontWeight: 600,
+                  minHeight: 44,
                   whiteSpace: 'nowrap'
                 }}
               >

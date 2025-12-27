@@ -1,6 +1,7 @@
 import ManualControls from '../../ManualControls';
 import PIDControls from '../../PIDControls';
 import CSVLoggingControls from '../../CSVLoggingControls';
+import useMediaQuery from '../../hooks/useMediaQuery';
 
 export default function ControlsTab({
   // Manual controls
@@ -32,8 +33,10 @@ export default function ControlsTab({
   isSavingPreset,
   handleSavePreset
 }) {
+  const { isMobile } = useMediaQuery();
+
   return (
-    <div style={{ maxWidth: 500 }}>
+    <div style={{ maxWidth: isMobile ? '100%' : 500, padding: isMobile ? '0 12px' : 0 }}>
       <h2 style={{ margin: '0 0 20px 0', fontSize: 20 }}>Controls</h2>
 
       <ManualControls

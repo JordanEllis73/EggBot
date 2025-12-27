@@ -1,4 +1,5 @@
 import TemperatureControls from '../../TemperatureControls';
+import useMediaQuery from '../../hooks/useMediaQuery';
 
 export default function TemperatureTargetsTab({
   setpointInput,
@@ -17,8 +18,10 @@ export default function TemperatureTargetsTab({
   onMeatSetpointCancel,
   temperatureUnit
 }) {
+  const { isMobile } = useMediaQuery();
+
   return (
-    <div style={{ maxWidth: 500 }}>
+    <div style={{ maxWidth: isMobile ? '100%' : 500, padding: isMobile ? '0 12px' : 0 }}>
       <h2 style={{ margin: '0 0 20px 0', fontSize: 20 }}>Temperature Targets</h2>
       <TemperatureControls
         setpointInput={setpointInput}

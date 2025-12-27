@@ -1,8 +1,12 @@
-// Fixed viewBox dimensions - SVG scales via CSS
-const WIDTH = 900;
-const HEIGHT = 400;
+import useMediaQuery from './hooks/useMediaQuery';
 
 export default function PIDChart({ points }) {
+  const { isMobile } = useMediaQuery();
+
+  // Responsive viewBox dimensions
+  const WIDTH = isMobile ? 600 : 900;
+  const HEIGHT = isMobile ? 300 : 400;
+
   const width = WIDTH;
   const height = HEIGHT;
 
@@ -23,9 +27,11 @@ export default function PIDChart({ points }) {
     );
   }
 
-  const padding = { top: 20, right: 60, bottom: 50, left: 60 };
+  const padding = isMobile
+    ? { top: 15, right: 40, bottom: 40, left: 45 }
+    : { top: 20, right: 60, bottom: 50, left: 60 };
   const chartWidth = Math.max(width - padding.left - padding.right, 100);
-  const chartHeight = Math.max(height - padding.top - padding.bottom - 50, 100);
+  const chartHeight = Math.max(height - padding.top - padding.bottom - (isMobile ? 30 : 50), 100);
 
   const proportionalData = points.map(p => p.pid_proportional || 0);
   const integralData = points.map(p => p.pid_integral || 0);
@@ -84,7 +90,7 @@ export default function PIDChart({ points }) {
   const startTime = Date.now() - (timeSpan * 1000);
 
   const timeLabels = [];
-  const numTimeLabels = Math.min(6, points.length);
+  const numTimeLabels = Math.min(isMobile ? 4 : 6, points.length);
   for (let i = 0; i < numTimeLabels; i++) {
     const index = Math.floor((i / (numTimeLabels - 1)) * (points.length - 1));
     const timestamp = startTime + (index * 2000);
@@ -123,7 +129,7 @@ export default function PIDChart({ points }) {
                 x={-10}
                 y={line.y + 4}
                 fill="#888"
-                fontSize="11"
+                fontSize={isMobile ? "10" : "11"}
                 textAnchor="end"
               >
                 {line.value.toFixed(1)}
@@ -137,7 +143,7 @@ export default function PIDChart({ points }) {
               x={chartWidth + 10}
               y={line.y + 4}
               fill="#888"
-              fontSize="11"
+              fontSize={isMobile ? "10" : "11"}
               textAnchor="start"
             >
               {line.value.toFixed(0)}%
@@ -158,7 +164,7 @@ export default function PIDChart({ points }) {
                 x={label.x}
                 y={chartHeight + 18}
                 fill="#888"
-                fontSize="11"
+                fontSize={isMobile ? "10" : "11"}
                 textAnchor="middle"
               >
                 {label.label}
@@ -208,22 +214,22 @@ export default function PIDChart({ points }) {
 
         <text
           x={20}
-          y={(height - 82) / 2}
+          y={(height - (isMobile ? 62 : 82)) / 2}
           fill="#888"
-          fontSize="12"
+          fontSize={isMobile ? "11" : "12"}
           textAnchor="middle"
-          transform={`rotate(-90, 20, ${(height - 82) / 2})`}
+          transform={`rotate(-90, 20, ${(height - (isMobile ? 62 : 82)) / 2})`}
         >
           PID Contribution
         </text>
 
         <text
-          x={width - 52}
-          y={(height - 82) / 2}
+          x={width - (isMobile ? 32 : 52)}
+          y={(height - (isMobile ? 62 : 82)) / 2}
           fill="#888"
-          fontSize="12"
+          fontSize={isMobile ? "11" : "12"}
           textAnchor="middle"
-          transform={`rotate(90, ${width - 52}, ${(height - 82) / 2})`}
+          transform={`rotate(90, ${width - (isMobile ? 32 : 52)}, ${(height - (isMobile ? 62 : 82)) / 2})`}
         >
           Damper %
         </text>
@@ -231,22 +237,22 @@ export default function PIDChart({ points }) {
 
       <div style={{
         display: "flex",
-        gap: 16,
-        marginTop: 12,
+        gap: isMobile ? 8 : 16,
+        marginTop: isMobile ? 8 : 12,
         flexWrap: "wrap",
         justifyContent: "center"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{ width: 16, height: 2, background: "#3b82f6" }}></div>
-          <span style={{ color: "#888", fontSize: 12 }}>Proportional</span>
+          <span style={{ color: "#888", fontSize: isMobile ? 10 : 12 }}>Proportional</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{ width: 16, height: 2, background: "#10b981" }}></div>
-          <span style={{ color: "#888", fontSize: 12 }}>Integral</span>
+          <span style={{ color: "#888", fontSize: isMobile ? 10 : 12 }}>Integral</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{ width: 16, height: 2, background: "#ef4444" }}></div>
-          <span style={{ color: "#888", fontSize: 12 }}>Derivative</span>
+          <span style={{ color: "#888", fontSize: isMobile ? 10 : 12 }}>Derivative</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <div style={{
@@ -255,7 +261,7 @@ export default function PIDChart({ points }) {
             background: "#f59e0b",
             backgroundImage: "repeating-linear-gradient(to right, #f59e0b 0, #f59e0b 4px, transparent 4px, transparent 8px)"
           }}></div>
-          <span style={{ color: "#888", fontSize: 12 }}>Damper %</span>
+          <span style={{ color: "#888", fontSize: isMobile ? 10 : 12 }}>Damper %</span>
         </div>
       </div>
     </div>

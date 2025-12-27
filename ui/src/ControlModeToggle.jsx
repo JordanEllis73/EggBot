@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { setControlMode } from './api';
+import useMediaQuery from './hooks/useMediaQuery';
+import useTouchDevice from './hooks/useTouchDevice';
 
 export default function ControlModeToggle({
   controlMode = 'manual',
@@ -7,6 +9,8 @@ export default function ControlModeToggle({
   disabled = false,
   compact = false
 }) {
+  const { isMobile } = useMediaQuery();
+  const isTouchDevice = useTouchDevice();
   const [isChanging, setIsChanging] = useState(false);
 
   const handleToggle = async () => {
@@ -34,15 +38,16 @@ export default function ControlModeToggle({
         style={{
           display: 'flex',
           alignItems: 'center',
-          padding: '6px 12px',
+          padding: isTouchDevice ? '10px 14px' : '6px 12px',
           borderRadius: 16,
           border: `2px solid ${controlMode === 'automatic' ? '#00aa00' : '#666'}`,
           background: controlMode === 'automatic' ? '#00aa00' : '#333',
           color: controlMode === 'automatic' ? 'white' : '#eaeaea',
-          fontSize: 13,
+          fontSize: isMobile ? 14 : 13,
           cursor: (isChanging || disabled) ? 'not-allowed' : 'pointer',
           opacity: (isChanging || disabled) ? 0.6 : 1,
           fontWeight: 'bold',
+          minHeight: 44,
           transition: 'all 0.2s ease'
         }}
       >
@@ -71,15 +76,16 @@ export default function ControlModeToggle({
           style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '8px 16px',
+            padding: isTouchDevice ? '12px 16px' : '8px 16px',
             borderRadius: 20,
             border: `2px solid ${controlMode === 'automatic' ? '#00aa00' : '#666'}`,
             background: controlMode === 'automatic' ? '#00aa00' : '#333',
             color: controlMode === 'automatic' ? 'white' : '#eaeaea',
-            fontSize: 14,
+            fontSize: isMobile ? 15 : 14,
             cursor: (isChanging || disabled) ? 'not-allowed' : 'pointer',
             opacity: (isChanging || disabled) ? 0.6 : 1,
             minWidth: 120,
+            minHeight: 44,
             justifyContent: 'center',
             fontWeight: 'bold',
             transition: 'all 0.2s ease'

@@ -1,5 +1,8 @@
-export default function TemperatureControls({ 
-  setpointInput, 
+import useMediaQuery from './hooks/useMediaQuery';
+import useTouchDevice from './hooks/useTouchDevice';
+
+export default function TemperatureControls({
+  setpointInput,
   setSetpointInput,
   meatSetpointInput,
   setMeatSetpointInput,
@@ -15,6 +18,9 @@ export default function TemperatureControls({
   onMeatSetpointCancel,
   temperatureUnit = 'C'
 }) {
+  const { isMobile } = useMediaQuery();
+  const isTouchDevice = useTouchDevice();
+
   return (
     <div style={{ background: "#1a1a1a", padding: 16, borderRadius: 8, marginBottom: 20 }}>
       <h3 style={{ margin: "0 0 16px 0" }}>Temperature Targets</h3>
@@ -26,8 +32,8 @@ export default function TemperatureControls({
         </label>
         <form onSubmit={onSetpointSubmit}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-            <input 
-              type="number" 
+            <input
+              type="number"
               value={setpointInput}
               onChange={(e) => {
                 setIsEditingSetpoint(true);
@@ -35,16 +41,17 @@ export default function TemperatureControls({
                 localStorage.setItem('eggbot_setpoint_input', e.target.value);
               }}
               disabled={isSubmittingSetpoint}
-              min="0" 
+              min="0"
               max={temperatureUnit === 'F' ? "750" : "400"}
-              style={{ 
+              style={{
                 flex: 1,
-                padding: 8, 
-                borderRadius: 4, 
+                padding: isTouchDevice ? 12 : 8,
+                borderRadius: 4,
                 border: isEditingSetpoint ? '2px solid #5bd' : '1px solid #333',
                 background: '#222',
                 color: '#eaeaea',
-                fontSize: 14
+                fontSize: isMobile ? 16 : 14,
+                minHeight: isTouchDevice ? 44 : 'auto'
               }}
             />
             <span style={{ fontSize: 14 }}>°{temperatureUnit}</span>
@@ -52,32 +59,36 @@ export default function TemperatureControls({
           
           {isEditingSetpoint && (
             <div style={{ display: "flex", gap: 8 }}>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isSubmittingSetpoint}
-                style={{ 
+                style={{
                   flex: 1,
-                  padding: '6px 12px', 
-                  borderRadius: 4, 
+                  padding: isTouchDevice ? '12px 16px' : '6px 12px',
+                  borderRadius: 4,
                   border: 'none',
                   background: '#5bd',
                   color: '#000',
-                  fontSize: 12
+                  fontSize: isMobile ? 15 : 12,
+                  minHeight: 44,
+                  cursor: 'pointer'
                 }}
               >
                 {isSubmittingSetpoint ? 'Setting...' : 'Apply'}
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={onSetpointCancel}
-                style={{ 
+                style={{
                   flex: 1,
-                  padding: '6px 12px', 
-                  borderRadius: 4, 
+                  padding: isTouchDevice ? '12px 16px' : '6px 12px',
+                  borderRadius: 4,
                   border: '1px solid #666',
                   background: 'transparent',
                   color: '#eaeaea',
-                  fontSize: 12
+                  fontSize: isMobile ? 15 : 12,
+                  minHeight: 44,
+                  cursor: 'pointer'
                 }}
               >
                 Cancel
@@ -94,8 +105,8 @@ export default function TemperatureControls({
         </label>
         <form onSubmit={onMeatSetpointSubmit}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-            <input 
-              type="number" 
+            <input
+              type="number"
               value={meatSetpointInput}
               onChange={(e) => {
                 setIsEditingMeatSetpoint(true);
@@ -103,17 +114,18 @@ export default function TemperatureControls({
                 localStorage.setItem('eggbot_meat_setpoint_input', e.target.value);
               }}
               disabled={isSubmittingMeatSetpoint}
-              min="0" 
+              min="0"
               max={temperatureUnit === 'F' ? "400" : "200"}
               placeholder="Optional"
-              style={{ 
+              style={{
                 flex: 1,
-                padding: 8, 
-                borderRadius: 4, 
+                padding: isTouchDevice ? 12 : 8,
+                borderRadius: 4,
                 border: isEditingMeatSetpoint ? '2px solid #4ecdc4' : '1px solid #333',
                 background: '#222',
                 color: '#eaeaea',
-                fontSize: 14
+                fontSize: isMobile ? 16 : 14,
+                minHeight: isTouchDevice ? 44 : 'auto'
               }}
             />
             <span style={{ fontSize: 14 }}>°{temperatureUnit}</span>
@@ -121,32 +133,36 @@ export default function TemperatureControls({
           
           {isEditingMeatSetpoint && (
             <div style={{ display: "flex", gap: 8 }}>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isSubmittingMeatSetpoint}
-                style={{ 
+                style={{
                   flex: 1,
-                  padding: '6px 12px', 
-                  borderRadius: 4, 
+                  padding: isTouchDevice ? '12px 16px' : '6px 12px',
+                  borderRadius: 4,
                   border: 'none',
                   background: '#4ecdc4',
                   color: '#000',
-                  fontSize: 12
+                  fontSize: isMobile ? 15 : 12,
+                  minHeight: 44,
+                  cursor: 'pointer'
                 }}
               >
                 {isSubmittingMeatSetpoint ? 'Setting...' : 'Apply'}
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={onMeatSetpointCancel}
-                style={{ 
+                style={{
                   flex: 1,
-                  padding: '6px 12px', 
-                  borderRadius: 4, 
+                  padding: isTouchDevice ? '12px 16px' : '6px 12px',
+                  borderRadius: 4,
                   border: '1px solid #666',
                   background: 'transparent',
                   color: '#eaeaea',
-                  fontSize: 12
+                  fontSize: isMobile ? 15 : 12,
+                  minHeight: 44,
+                  cursor: 'pointer'
                 }}
               >
                 Cancel

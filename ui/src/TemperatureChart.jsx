@@ -1,10 +1,13 @@
 import { getDisplayTemperature, formatTemperature } from './utils/temperature';
-
-// Fixed viewBox dimensions - SVG scales via CSS
-const WIDTH = 900;
-const HEIGHT = 400;
+import useMediaQuery from './hooks/useMediaQuery';
 
 export default function TemperatureChart({ points, status, meaterStatus, meaterHistory = [], temperatureUnit = 'C' }) {
+  const { isMobile } = useMediaQuery();
+
+  // Responsive viewBox dimensions
+  const WIDTH = isMobile ? 600 : 900;
+  const HEIGHT = isMobile ? 300 : 400;
+
   const width = WIDTH;
   const height = HEIGHT;
 
@@ -25,7 +28,9 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
     );
   }
 
-  const padding = { top: 20, right: 80, bottom: 50, left: 60 };
+  const padding = isMobile
+    ? { top: 15, right: 40, bottom: 40, left: 45 }
+    : { top: 20, right: 80, bottom: 50, left: 60 };
   const chartWidth = Math.max(width - padding.left - padding.right, 100);
   const chartHeight = Math.max(height - padding.top - padding.bottom, 100);
 
@@ -170,7 +175,7 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
   }
 
   const timeTicks = [];
-  const numTimeTicks = Math.min(6, points.length);
+  const numTimeTicks = Math.min(isMobile ? 4 : 6, points.length);
   const timeStep = Math.max(1, Math.floor(points.length / numTimeTicks));
   for (let i = 0; i < points.length; i += timeStep) {
     const timestamp = startTime + (i * 2000);
@@ -326,7 +331,7 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
             x={padding.left - 8}
             y={tick.y + 4}
             fill="#aaa"
-            fontSize="12"
+            fontSize={isMobile ? "11" : "12"}
             textAnchor="end"
           >
             {tick.label}
@@ -339,7 +344,7 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
             x={tick.x}
             y={height - padding.bottom + 18}
             fill="#aaa"
-            fontSize="11"
+            fontSize={isMobile ? "10" : "11"}
             textAnchor="middle"
           >
             {tick.label}
@@ -350,7 +355,7 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
           x={padding.left / 2}
           y={height / 2}
           fill="#aaa"
-          fontSize="13"
+          fontSize={isMobile ? "12" : "13"}
           textAnchor="middle"
           transform={`rotate(-90 ${padding.left / 2} ${height / 2})`}
         >
@@ -361,7 +366,7 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
           x={(width - padding.right + padding.left) / 2}
           y={height - 6}
           fill="#aaa"
-          fontSize="13"
+          fontSize={isMobile ? "12" : "13"}
           textAnchor="middle"
         >
           Time
@@ -425,15 +430,17 @@ export default function TemperatureChart({ points, status, meaterStatus, meaterH
 
       <div style={{
         position: 'absolute',
-        top: 12,
-        right: 12,
+        top: isMobile ? 'auto' : 12,
+        bottom: isMobile ? 12 : 'auto',
+        right: isMobile ? 8 : 12,
+        left: isMobile ? 8 : 'auto',
         background: 'rgba(20, 20, 20, 0.95)',
-        padding: 10,
+        padding: isMobile ? 8 : 10,
         borderRadius: 6,
         border: '1px solid #333',
-        maxWidth: 180
+        maxWidth: isMobile ? '100%' : 180
       }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: isMobile ? 10 : 11 }}>
           {isPitConnected && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ width: 16, height: 3, background: '#ff6b35', flexShrink: 0 }}></div>

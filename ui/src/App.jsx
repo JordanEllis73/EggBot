@@ -13,6 +13,8 @@ import {
   setControlMode
 } from "./api";
 import { useDebounce } from "./hooks/useDebounce";
+import useMediaQuery from "./hooks/useMediaQuery";
+import useTouchDevice from "./hooks/useTouchDevice";
 import { getApiTemperature, getDisplayTemperature } from "./utils/temperature";
 import StatusDisplay from "./StatusDisplay";
 import TemperatureToggle from "./TemperatureToggle";
@@ -25,11 +27,16 @@ import PIDOutputTab from "./components/tabs/PIDOutputTab";
 import ProbesTab from "./components/tabs/ProbesTab";
 
 export default function App() {
+  // Responsive hooks
+  const { isMobile, isTablet, isDesktop } = useMediaQuery();
+  const isTouchDevice = useTouchDevice();
+
   const [status, setStatus] = useState(null);
   const [telemetry, setTelemetry] = useState([]);
   const [meaterStatus, setMeaterStatus] = useState(null);
   const [meaterHistory, setMeaterHistory] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [currentSetpoint, setCurrentSetpoint] = useState(110);
   const [currentMeatSetpoint, setCurrentMeatSetpoint] = useState(100);
@@ -519,22 +526,85 @@ export default function App() {
     }
   ];
 
+  // Determine sidebar width based on screen size
+  const sidebarWidth = isMobile ? 280 : (isTablet ? 160 : 180);
+
+  // Auto-close sidebar when tab changes on mobile
+  useEffect(() => {
+    if (isMobile && sidebarOpen) {
+      setSidebarOpen(false);
+    }
+  }, [activeTab, isMobile]);
+
   return (
     <div style={{
       fontFamily: "Inter, system-ui, sans-serif",
       color: "#eaeaea",
       background: "#0a0a0a",
       minHeight: "100vh",
-      display: "flex"
+      display: "flex",
+      position: "relative",
+      overscrollBehavior: "contain"
     }}>
+      {/* Hamburger Menu Button (Mobile Only) */}
+      {isMobile && (
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label="Toggle menu"
+          style={{
+            position: "fixed",
+            top: 12,
+            left: 12,
+            zIndex: 1000,
+            width: 44,
+            height: 44,
+            background: "#222",
+            border: "1px solid #444",
+            borderRadius: 8,
+            color: "#eaeaea",
+            fontSize: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            WebkitUserSelect: "none",
+            userSelect: "none",
+            WebkitTapHighlightColor: "transparent"
+          }}
+        >
+          ☰
+        </button>
+      )}
+
+      {/* Backdrop (Mobile Only) */}
+      {isMobile && sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            zIndex: 998
+          }}
+        />
+      )}
+
       {/* Status Sidebar */}
       <div style={{
-        width: 180,
+        width: sidebarWidth,
         background: "#111",
         padding: 16,
         borderRight: "1px solid #333",
         display: "flex",
-        flexDirection: "column"
+        flexDirection: "column",
+        position: isMobile ? "fixed" : "relative",
+        left: isMobile ? (sidebarOpen ? 0 : -sidebarWidth) : 0,
+        top: isMobile ? 0 : "auto",
+        bottom: isMobile ? 0 : "auto",
+        zIndex: isMobile ? 999 : "auto",
+        transition: "left 0.3s ease",
+        overflowY: "auto",
+        boxSizing: "border-box"
       }}>
         <div style={{
           display: "flex",
@@ -560,7 +630,8 @@ export default function App() {
       {/* Main Tab Area */}
       <div style={{
         flex: 1,
-        padding: 20,
+        padding: isMobile ? 12 : 20,
+        paddingTop: isMobile ? 64 : 20,
         display: "flex",
         flexDirection: "column",
         minWidth: 0

@@ -1,9 +1,12 @@
 import MeaterControls from '../../MeaterControls';
 import ThermistorCalibration from '../ThermistorCalibration';
+import useMediaQuery from '../../hooks/useMediaQuery';
 
 export default function ProbesTab({ temperatureUnit, status }) {
+  const { isMobile } = useMediaQuery();
+
   return (
-    <div style={{ maxWidth: 600 }}>
+    <div style={{ maxWidth: isMobile ? '100%' : 600, padding: isMobile ? '0 12px' : 0 }}>
       <h2 style={{ margin: '0 0 20px 0', fontSize: 20 }}>Probe Management</h2>
 
       <ThermistorCalibration status={status} temperatureUnit={temperatureUnit} />

@@ -1,6 +1,9 @@
 import { getDisplayTemperature, formatTemperature } from "./utils/temperature";
+import useMediaQuery from "./hooks/useMediaQuery";
 
 export default function StatusDisplay({ status, meaterStatus, temperatureUnit, controlMode }) {
+  const { isMobile } = useMediaQuery();
+
   const pitTemp = getDisplayTemperature(status?.pit_temp_c, temperatureUnit);
   const meatTemp1 = getDisplayTemperature(status?.meat_temp_1_c || status?.meat_temp_c, temperatureUnit);
   const meatTemp2 = getDisplayTemperature(status?.meat_temp_2_c, temperatureUnit);
@@ -13,20 +16,20 @@ export default function StatusDisplay({ status, meaterStatus, temperatureUnit, c
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      padding: '6px 0',
+      padding: isMobile ? '5px 0' : '6px 0',
       borderBottom: '1px solid #2a2a2a'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <div style={{
-          width: 8,
-          height: 8,
+          width: isMobile ? 10 : 8,
+          height: isMobile ? 10 : 8,
           borderRadius: '50%',
           background: connected && temp !== null ? color : '#444'
         }} />
-        <span style={{ fontSize: 12, color: '#999' }}>{label}</span>
+        <span style={{ fontSize: isMobile ? 11 : 12, color: '#999' }}>{label}</span>
       </div>
       <span style={{
-        fontSize: 14,
+        fontSize: isMobile ? 13 : 14,
         fontWeight: 600,
         color: connected && temp !== null ? '#eee' : '#555'
       }}>
@@ -60,11 +63,11 @@ export default function StatusDisplay({ status, meaterStatus, temperatureUnit, c
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '6px 0',
+          padding: isMobile ? '5px 0' : '6px 0',
           borderBottom: '1px solid #2a2a2a'
         }}>
-          <span style={{ fontSize: 12, color: '#999' }}>Damper</span>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#eee' }}>
+          <span style={{ fontSize: isMobile ? 11 : 12, color: '#999' }}>Damper</span>
+          <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: '#eee' }}>
             {status?.damper_percent ?? 0}%
           </span>
         </div>
@@ -73,11 +76,11 @@ export default function StatusDisplay({ status, meaterStatus, temperatureUnit, c
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '6px 0'
+          padding: isMobile ? '5px 0' : '6px 0'
         }}>
-          <span style={{ fontSize: 12, color: '#999' }}>Mode</span>
+          <span style={{ fontSize: isMobile ? 11 : 12, color: '#999' }}>Mode</span>
           <span style={{
-            fontSize: 12,
+            fontSize: isMobile ? 11 : 12,
             fontWeight: 600,
             color: controlMode === 'automatic' ? '#00aa00' : '#888',
             display: 'flex',
@@ -100,11 +103,11 @@ export default function StatusDisplay({ status, meaterStatus, temperatureUnit, c
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              padding: '6px 0',
+              padding: isMobile ? '5px 0' : '6px 0',
               borderBottom: status?.meat_setpoint_c ? '1px solid #2a2a2a' : 'none'
             }}>
-              <span style={{ fontSize: 12, color: '#999' }}>Pit Target</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#ff6b35' }}>
+              <span style={{ fontSize: isMobile ? 11 : 12, color: '#999' }}>Pit Target</span>
+              <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: '#ff6b35' }}>
                 {formatTemperature(getDisplayTemperature(status.setpoint_c, temperatureUnit), temperatureUnit)}
               </span>
             </div>
@@ -113,10 +116,10 @@ export default function StatusDisplay({ status, meaterStatus, temperatureUnit, c
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '6px 0'
+                padding: isMobile ? '5px 0' : '6px 0'
               }}>
-                <span style={{ fontSize: 12, color: '#999' }}>Meat Target</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: '#4ecdc4' }}>
+                <span style={{ fontSize: isMobile ? 11 : 12, color: '#999' }}>Meat Target</span>
+                <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: 600, color: '#4ecdc4' }}>
                   {formatTemperature(getDisplayTemperature(status.meat_setpoint_c, temperatureUnit), temperatureUnit)}
                 </span>
               </div>
